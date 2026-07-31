@@ -2,7 +2,7 @@
 .env
 
 # Binary
-api
+/api
 *.exe
 *.exe.log
 *.out
