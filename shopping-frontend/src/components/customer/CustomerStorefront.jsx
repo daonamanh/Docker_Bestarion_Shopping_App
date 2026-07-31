@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ShoppingCart, ShoppingBag, Package, Search, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, Package } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { API_BASE_URL, getAuthHeaders } from '../../config';
 import ProductCatalog from './ProductCatalog';
@@ -15,19 +15,6 @@ export default function CustomerStorefront() {
   const [addingId, setAddingId] = useState(null);
   const [checkoutStatus, setCheckoutStatus] = useState({ loading: false });
 
-  // 🔴 1. Bổ sung State Danh mục (Categories)
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
-
-  // Search, Filter & Pagination states
-  const [search, setSearch] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit] = useState(6); // Products per page
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-
   // Order history states
   const [myOrders, setMyOrders] = useState([]);
   const [loadingMyOrders, setLoadingMyOrders] = useState(false);
@@ -35,58 +22,21 @@ export default function CustomerStorefront() {
   const [loadingMyOrderDetail, setLoadingMyOrderDetail] = useState(false);
   const [isMyOrderModalOpen, setIsMyOrderModalOpen] = useState(false);
 
-  // 🔴 2. Lấy danh sách Categories từ API
-  const fetchCategories = async () => {
+  const fetchProducts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/categories`, {
+      const res = await fetch(`${API_BASE_URL}/products?limit=100`, {
         headers: getAuthHeaders()
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data.data)) {
-          setCategories(data.data);
-        } else if (Array.isArray(data)) {
-          setCategories(data);
-        } else {
-          setCategories([]);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      setCategories([]);
-    }
-  };
-
-  // 🔴 3. Cập nhật fetchProducts gửi thêm param 'category'
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
-
-      if (search.trim()) queryParams.append('search', search.trim());
-      if (selectedCategory) queryParams.append('category', selectedCategory); // 👈 Thêm category filter
-      if (minPrice) queryParams.append('min_price', minPrice);
-      if (maxPrice) queryParams.append('max_price', maxPrice);
-
-      const res = await fetch(`${API_BASE_URL}/products?${queryParams.toString()}`, {
-        headers: getAuthHeaders()
-      });
-
       if (res.ok) {
         const data = await res.json();
         setProducts(data.data || []);
-        setTotalPages(data.total_pages || 1);
-        setTotalItems(data.total || 0);
       }
     } catch (err) {
       console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
     }
-  }, [page, limit, search, selectedCategory, minPrice, maxPrice]);
+  };
 
   const fetchCart = async () => {
     try {
@@ -144,33 +94,15 @@ export default function CustomerStorefront() {
   };
 
   useEffect(() => {
+    fetchProducts();
     fetchCart();
-    fetchMyOrders();
-    fetchCategories(); // 👈 Gọi API lấy danh mục khi trang vừa load
-  }, [fetchMyOrders]);
+  }, []);
 
   useEffect(() => {
-    if (activeTab === 'shop') {
-      fetchProducts();
-    } else if (activeTab === 'my_orders') {
+    if (activeTab === 'my_orders') {
       fetchMyOrders();
     }
-  }, [activeTab, fetchProducts, fetchMyOrders]);
-
-  const handleFilterSubmit = (e) => {
-    e.preventDefault();
-    setPage(1); // Reset về trang 1 khi lọc
-    fetchProducts();
-  };
-
-  // 🔴 4. Cập nhật Reset bộ lọc bao gồm cả Category
-  const handleResetFilter = () => {
-    setSearch('');
-    setSelectedCategory('');
-    setMinPrice('');
-    setMaxPrice('');
-    setPage(1);
-  };
+  }, [activeTab, fetchMyOrders]);
 
   const handleAddToCart = async (product) => {
     if (product.stock <= 0) return;
@@ -230,7 +162,7 @@ export default function CustomerStorefront() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
-      {/* Header card */}
+      {/* Header card containing Product Store title, Shop Catalog & My Orders buttons, and Cart badge on the same line */}
       <div className="flex justify-between items-center bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Product Store</h1>
@@ -263,138 +195,19 @@ export default function CustomerStorefront() {
       </div>
 
       {activeTab === 'shop' && (
-        <div className="space-y-6">
-          {/* Search & Filter Bar */}
-          <form onSubmit={handleFilterSubmit} className="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50 flex flex-wrap gap-3 items-center">
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-900/80 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            {/* 🔴 5. Dropdown chọn Category */}
-            <div className="relative w-full sm:w-44">
-              <Layers className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setPage(1); // Auto reload trang 1 khi đổi danh mục
-                }}
-                className="w-full bg-slate-900/80 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
-              >
-                <option value="">All Categories</option>
-                {Array.isArray(categories) && categories.map((cat, idx) => {
-                  const catVal = typeof cat === 'string' ? cat : cat.id || cat.name;
-                  const catName = typeof cat === 'string' ? cat : cat.name;
-                  return (
-                    <option key={idx} value={catVal} className="bg-slate-800 text-white">
-                      {catName}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            {/* Min Price */}
-            <div className="w-24 sm:w-28">
-              <input
-                type="number"
-                placeholder="Min $"
-                min="0"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                className="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            {/* Max Price */}
-            <div className="w-24 sm:w-28">
-              <input
-                type="number"
-                placeholder="Max $"
-                min="0"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                className="w-full bg-slate-900/80 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            {/* Filter Button */}
-            <button
-              type="submit"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 shrink-0"
-            >
-              <Filter className="w-4 h-4" /> Filter
-            </button>
-
-            {/* Clear Filter Button */}
-            {(search || selectedCategory || minPrice || maxPrice) && (
-              <button
-                type="button"
-                onClick={handleResetFilter}
-                className="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-sm transition flex items-center gap-1 shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> Clear
-              </button>
-            )}
-          </form>
-
-          {/* Catalog & Cart Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ProductCatalog
-              products={products}
-              loading={loading}
-              addingId={addingId}
-              onAddToCart={handleAddToCart}
-            />
-            <ShoppingCartComponent
-              cart={cart}
-              checkoutStatus={checkoutStatus}
-              onFetchCart={fetchCart}
-              onCheckout={handleCheckout}
-            />
-          </div>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
-              <span className="text-xs text-slate-400 text-center sm:text-left">
-                Showing <span className="text-slate-200 font-medium">{products.length}</span> of{' '}
-                <span className="text-slate-200 font-medium">{totalItems}</span> items (Page {page} of {totalPages})
-              </span>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={page === 1 || loading}
-                  className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-
-                <span className="text-xs sm:text-sm text-slate-300 px-3 font-medium whitespace-nowrap text-center min-w-[50px]">
-                  {page} / {totalPages}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={page >= totalPages || loading}
-                  className="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <ProductCatalog
+            products={products}
+            loading={loading}
+            addingId={addingId}
+            onAddToCart={handleAddToCart}
+          />
+          <ShoppingCartComponent
+            cart={cart}
+            checkoutStatus={checkoutStatus}
+            onFetchCart={fetchCart}
+            onCheckout={handleCheckout}
+          />
         </div>
       )}
 
