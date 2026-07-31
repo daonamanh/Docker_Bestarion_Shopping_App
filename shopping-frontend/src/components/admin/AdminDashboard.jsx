@@ -20,8 +20,21 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
   const [sortBy, setSortBy] = useState('created_at');
   const [order, setOrder] = useState('desc');
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/categories`);
+      const result = await res.json();
+      const catList = Array.isArray(result.data) ? result.data : (Array.isArray(result) ? result : []);
+      setCategories(catList);
+    } catch (err) {
+      console.error('Cannot fetch categories:', err);
+    }
+  }, []);
 
   // 🟢 Product modal state (Thêm category vào formData)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,6 +73,7 @@ export default function AdminDashboard() {
       if (search.trim()) params.append('search', search.trim());
       if (minPrice) params.append('min_price', minPrice);
       if (maxPrice) params.append('max_price', maxPrice);
+      if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
 
       const res = await fetch(`${API_BASE_URL}/products?${params.toString()}`);
       const result = await res.json();
@@ -72,7 +86,7 @@ export default function AdminDashboard() {
     } finally {
       setLoadingProducts(false);
     }
-  }, [pagination.page, pagination.limit, search, minPrice, maxPrice, sortBy, order]);
+  }, [pagination.page, pagination.limit, search, minPrice, maxPrice, selectedCategory, sortBy, order]);
 
   const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
@@ -129,10 +143,13 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab === 'products') fetchProducts();
+    if (activeTab === 'products') {
+      fetchProducts();
+      fetchCategories();
+    }
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'orders') fetchOrders();
-  }, [activeTab, fetchProducts, fetchUsers, fetchOrders]);
+  }, [activeTab, fetchProducts, fetchCategories, fetchUsers, fetchOrders]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -363,6 +380,9 @@ export default function AdminDashboard() {
             setMinPrice={setMinPrice}
             maxPrice={maxPrice}
             setMaxPrice={setMaxPrice}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            categories={categories}
             sortBy={sortBy}
             setSortBy={setSortBy}
             order={order}

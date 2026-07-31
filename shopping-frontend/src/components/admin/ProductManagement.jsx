@@ -14,6 +14,9 @@ export default function ProductManagement({
   setMinPrice,
   maxPrice,
   setMaxPrice,
+  selectedCategory,
+  setSelectedCategory,
+  categories = [],
   sortBy,
   setSortBy,
   order,
@@ -44,7 +47,7 @@ export default function ProductManagement({
 
       {/* Thanh Tìm kiếm & Bộ lọc */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 bg-slate-800/40 p-4 rounded-2xl border border-slate-700/50">
-        <div className="md:col-span-4 relative">
+        <div className="md:col-span-3 relative">
           <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
           <input
             type="text"
@@ -55,7 +58,21 @@ export default function ProductManagement({
           />
         </div>
 
-        <div className="md:col-span-4 flex gap-2">
+        {/* 🟢 MỚI: Bộ lọc Category */}
+        <div className="md:col-span-3">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-full px-3 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-xs text-slate-300 focus:outline-none"
+          >
+            <option value="all">All Categories</option>
+            {Array.isArray(categories) && categories.map((cat, idx) => (
+              <option key={idx} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="md:col-span-3 flex gap-2">
           <input
             type="number"
             placeholder="Price from"
@@ -72,7 +89,7 @@ export default function ProductManagement({
           />
         </div>
 
-        <div className="md:col-span-4 flex gap-2">
+        <div className="md:col-span-3 flex gap-2">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
