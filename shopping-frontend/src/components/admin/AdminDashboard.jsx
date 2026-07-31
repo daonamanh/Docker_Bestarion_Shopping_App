@@ -243,6 +243,14 @@ export default function AdminDashboard() {
   };
 
   const handleRoleChange = async (userId, newRole, userName) => {
+    const targetUser = users.find(u => u.id === userId);
+    const adminCount = users.filter(u => u.role === 'admin').length;
+
+    if (targetUser?.role === 'admin' && newRole !== 'admin' && adminCount <= 1) {
+      toast.error('❌ Cannot demote the last remaining admin in the system!');
+      return;
+    }
+
     setUpdatingRoleId(userId);
     try {
       const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {

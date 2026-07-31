@@ -123,7 +123,7 @@ func (r *ShoppingRepository) Checkout(ctx context.Context, userID int64) (*domai
 
 		// ⚠️ KIỂM TRA TỒN KHO: Nếu không đủ stock -> Rollback toàn bộ
 		if item.stock < item.quantity {
-			return nil, fmt.Errorf("Product '%s' does not have enough stock (available: %d, in cart: %d)", item.name, item.stock, item.quantity)
+			return nil, fmt.Errorf("Product '%s' does not have enough stock", item.name)
 		}
 
 		totalAmount += item.price * float64(item.quantity)

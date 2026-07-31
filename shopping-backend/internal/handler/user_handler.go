@@ -190,6 +190,10 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
+		if errors.Is(err, domain.ErrLastAdminDemotion) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot demote the last remaining admin in the system"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update role"})
 		return
 	}

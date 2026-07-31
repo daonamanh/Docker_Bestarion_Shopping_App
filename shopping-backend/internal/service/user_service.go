@@ -203,6 +203,22 @@ func (s *userService) GetAllUsers(ctx context.Context) ([]domain.User, error) {
 
 // 🟢 MỚI: Service Cập nhật Role
 func (s *userService) UpdateUserRole(ctx context.Context, userID int64, role string) error {
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// Nếu tài khoản hiện tại là Admin và được đổi sang role khác Admin
+	if user.Role == "admin" && role != "admin" {
+		adminCount, err := s.repo.CountAdmins(ctx)
+		if err != nil {
+			return err
+		}
+		if adminCount <= 1 {
+			return domain.ErrLastAdminDemotion
+		}
+	}
+
 	return s.repo.UpdateRole(ctx, userID, role)
 }
 

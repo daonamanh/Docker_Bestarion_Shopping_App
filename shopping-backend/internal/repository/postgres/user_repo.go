@@ -140,3 +140,13 @@ func (r *userRepository) UpdateRole(ctx context.Context, userID int64, role stri
 
 	return nil
 }
+
+func (r *userRepository) CountAdmins(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM users WHERE role = 'admin'`
+	var count int
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}

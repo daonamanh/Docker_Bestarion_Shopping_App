@@ -43,11 +43,17 @@ export default function CustomerStorefront() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Hỗ trợ cả 2 dạng dữ liệu API trả về: mảng chuỗi hoặc mảng object [{id, name}]
-        setCategories(data.data || data || []);
+        if (Array.isArray(data.data)) {
+          setCategories(data.data);
+        } else if (Array.isArray(data)) {
+          setCategories(data);
+        } else {
+          setCategories([]);
+        }
       }
     } catch (err) {
       console.error('Error fetching categories:', err);
+      setCategories([]);
     }
   };
 
@@ -284,7 +290,7 @@ export default function CustomerStorefront() {
                 className="w-full bg-slate-900/80 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 appearance-none cursor-pointer"
               >
                 <option value="">All Categories</option>
-                {categories.map((cat, idx) => {
+                {Array.isArray(categories) && categories.map((cat, idx) => {
                   const catVal = typeof cat === 'string' ? cat : cat.id || cat.name;
                   const catName = typeof cat === 'string' ? cat : cat.name;
                   return (

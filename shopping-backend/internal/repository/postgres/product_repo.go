@@ -159,7 +159,7 @@ func (r *productRepository) GetCategories(ctx context.Context) ([]string, error)
 	}
 	defer rows.Close()
 
-	var categories []string
+	categories := []string{}
 	for rows.Next() {
 		var cat string
 		if err := rows.Scan(&cat); err == nil {
