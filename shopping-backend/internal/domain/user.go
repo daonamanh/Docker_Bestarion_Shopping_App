@@ -13,6 +13,7 @@ var (
 	ErrInvalidCredentials = errors.New("Invalid email or password")
 	ErrInvalidToken       = errors.New("Invalid or expired reset token")
 	ErrInvalidCurrentPassword = errors.New("Current password is incorrect")
+	ErrLastAdminDemotion  = errors.New("Cannot demote the last remaining admin in the system")
 )
 
 // User định nghĩa cấu trúc dữ liệu người dùng trong CSDL
@@ -82,4 +83,5 @@ type UserRepository interface {
 	// 🟢 MỚI: Phương thức quản lý Admin
 	GetAll(ctx context.Context) ([]User, error)
 	UpdateRole(ctx context.Context, userID int64, role string) error
+	CountAdmins(ctx context.Context) (int, error)
 }
