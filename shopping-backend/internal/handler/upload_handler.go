@@ -23,7 +23,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 	if err != nil {
 		file, err = c.FormFile("file")
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Không tìm thấy file ảnh trong yêu cầu"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "File not found in request"})
 			return
 		}
 	}
@@ -39,14 +39,14 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 	}
 
 	if !allowedExtensions[ext] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Định dạng file không được hỗ trợ. Chỉ hỗ trợ .jpg, .jpeg, .png, .gif, .webp"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File format not supported. Only .jpg, .jpeg, .png, .gif, .webp are allowed"})
 		return
 	}
 
 	// 3. TẠO THƯ MỤC UPLOADS NẾU CHƯA TỒN TẠI
 	uploadDir := "./uploads"
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể tạo thư mục lưu trữ ảnh"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot create upload directory"})
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 
 	// 5. Lưu file vào server
 	if err := c.SaveUploadedFile(file, dst); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Lỗi lưu file: %v", err)})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Error saving file: %v", err)})
 		return
 	}
 

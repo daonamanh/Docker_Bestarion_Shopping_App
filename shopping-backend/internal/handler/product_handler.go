@@ -40,6 +40,7 @@ func (h *ProductHandler) GetAll(c *gin.Context) {
 
 	query := domain.ProductQuery{
 		Search:   c.Query("search"),
+		Category: c.Query("category"), // 🟢 MỚI: Lấy param category từ URL
 		MinPrice: minPrice,
 		MaxPrice: maxPrice,
 		SortBy:   c.DefaultQuery("sort_by", "created_at"),
@@ -60,13 +61,13 @@ func (h *ProductHandler) GetAll(c *gin.Context) {
 func (h *ProductHandler) GetByID(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID không hợp lệ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
 	p, err := h.service.GetProductByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy sản phẩm"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
 		return
 	}
 
@@ -76,7 +77,7 @@ func (h *ProductHandler) GetByID(c *gin.Context) {
 func (h *ProductHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID không hợp lệ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
@@ -98,7 +99,7 @@ func (h *ProductHandler) Update(c *gin.Context) {
 func (h *ProductHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID không hợp lệ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
@@ -107,5 +108,16 @@ func (h *ProductHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Đã xóa sản phẩm thành công"})
+	c.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
+}
+
+// 🟢 MỚI: Handler trả về danh sách Categories
+func (h *ProductHandler) GetCategories(c *gin.Context) {
+	categories, err := h.service.GetCategories(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": categories})
 }
