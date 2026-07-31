@@ -19,6 +19,9 @@ type UserService interface {
 	Login(ctx context.Context, req domain.LoginReq) (*domain.AuthResponse, error)
 	ForgotPassword(ctx context.Context, req domain.ForgotPasswordReq) (string, error)
 	ResetPassword(ctx context.Context, req domain.ResetPasswordReq) error
+	GetProfile(ctx context.Context, userID int64) (*domain.User, error)
+	UpdateProfile(ctx context.Context, userID int64, req domain.UpdateProfileReq) error
+	ChangePassword(ctx context.Context, userID int64, req domain.ChangePasswordReq) error
 
 	// 🟢 BỔ SUNG 2 PHƯƠNG THỨC MỚI VÀO INTERFACE
 	GetAllUsers(ctx context.Context) ([]domain.User, error)
@@ -165,6 +168,32 @@ func (s *userService) ResetPassword(ctx context.Context, req domain.ResetPasswor
 	}
 
 	return s.repo.UpdatePassword(ctx, user.ID, string(newHashedPassword))
+}
+
+func (s *userService) GetProfile(ctx context.Context, userID int64) (*domain.User, error) {
+	return s.repo.GetByID(ctx, userID)
+}
+
+func (s *userService) UpdateProfile(ctx context.Context, userID int64, req domain.UpdateProfileReq) error {
+	return s.repo.UpdateFullName(ctx, userID, req.FullName)
+}
+
+func (s *userService) ChangePassword(ctx context.Context, userID int64, req domain.ChangePasswordReq) error {
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		return domain.ErrInvalidCurrentPassword
+	}
+
+	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdatePassword(ctx, userID, string(newHashedPassword))
 }
 
 // 🟢 MỚI: Service Lấy danh sách User

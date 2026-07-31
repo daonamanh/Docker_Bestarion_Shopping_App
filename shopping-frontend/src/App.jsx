@@ -3,9 +3,9 @@ import {
   Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight,
   ArrowUpDown, RefreshCw, ShoppingBag,
   X, Check, LogOut, ShoppingCart, User, Key, Mail,
-  AlertCircle, CheckCircle, ArrowLeft, Send, ShieldCheck, 
+  AlertCircle, CheckCircle, ArrowLeft, Send, ShieldCheck,
   ShieldAlert, UserCheck,
-  Package, Users // 👈 Đã thêm 2 icon này
+  Package, Users, Eye, Filter, Calendar, CreditCard // 👈 Đã thêm các icon mới
 } from 'lucide-react';
 
 // 🟢 Import Toastify
@@ -19,11 +19,18 @@ export default function App() {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [activeView, setActiveView] = useState('main');
+
+  const handleUserUpdate = (updatedUser) => {
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setActiveView('main');
     toast.info('👋 Đã đăng xuất khỏi tài khoản');
   };
 
@@ -33,7 +40,12 @@ export default function App() {
       <ToastContainer theme="dark" position="top-right" autoClose={3000} />
 
       {!user ? (
-        <AuthScreen onLoginSuccess={(userData) => setUser(userData)} />
+        <AuthScreen
+          onLoginSuccess={(userData) => {
+            setUser(userData);
+            setActiveView('main');
+          }}
+        />
       ) : (
         <>
           {/* Top Navbar */}
@@ -46,8 +58,8 @@ export default function App() {
                 <div>
                   <span className="font-bold text-white text-lg tracking-tight">Shopping Store</span>
                   <span className={`ml-3 text-xs px-2.5 py-0.5 rounded-full font-semibold ${user.role === 'admin'
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                     }`}>
                     {user.role === 'admin' ? 'ADMIN PANEL' : 'CUSTOMER STORE'}
                   </span>
@@ -60,6 +72,13 @@ export default function App() {
                   <p className="text-xs text-slate-400">{user.email}</p>
                 </div>
                 <button
+                  onClick={() => setActiveView(activeView === 'profile' ? 'main' : 'profile')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/60 hover:bg-indigo-600/20 text-slate-300 hover:text-indigo-300 border border-slate-600/50 hover:border-indigo-500/30 rounded-xl text-xs font-medium transition"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  {activeView === 'profile' ? 'Trang chính' : 'Tài khoản'}
+                </button>
+                <button
                   onClick={handleLogout}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/60 hover:bg-rose-600/20 text-slate-300 hover:text-rose-400 border border-slate-600/50 hover:border-rose-500/30 rounded-xl text-xs font-medium transition"
                 >
@@ -70,7 +89,17 @@ export default function App() {
           </nav>
 
           {/* Điều hướng View dựa vào Role */}
-          {user.role === 'admin' ? <AdminDashboard /> : <CustomerStorefront />}
+          {activeView === 'profile' ? (
+            <ProfilePage
+              user={user}
+              onBack={() => setActiveView('main')}
+              onUserUpdate={handleUserUpdate}
+            />
+          ) : user.role === 'admin' ? (
+            <AdminDashboard />
+          ) : (
+            <CustomerStorefront />
+          )}
         </>
       )}
     </div>
@@ -78,8 +107,8 @@ export default function App() {
 }
 
 /* =========================================================================
-   1. MÀN HÌNH AUTHENTICATION (Đăng ký / Đăng nhập / Quên & Đặt lại mật khẩu)
-   ========================================================================= */
+ 1. MÀN HÌNH AUTHENTICATION (Đăng ký / Đăng nhập / Quên & Đặt lại mật khẩu)
+ ========================================================================= */
 function AuthScreen({ onLoginSuccess }) {
   // mode: 'login' | 'register' | 'forgot' | 'reset'
   const [authMode, setAuthMode] = useState('login');
@@ -515,8 +544,250 @@ function AuthScreen({ onLoginSuccess }) {
 }
 
 /* =========================================================================
-   2. TRANG MUA SẮM DÀNH CHO CUSTOMER
-   ========================================================================= */
+ 2. TRANG HỒ SƠ NGƯỜI DÙNG
+ ========================================================================= */
+function ProfilePage({ user, onBack, onUserUpdate }) {
+  const [profile, setProfile] = useState(user);
+  const [nameForm, setNameForm] = useState({ full_name: user?.full_name || '' });
+  const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '' });
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingName, setSavingName] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    };
+  };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoadingProfile(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/me`, {
+          headers: getAuthHeaders()
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data);
+          setNameForm({ full_name: data.full_name || '' });
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error || 'Không thể tải thông tin tài khoản');
+        }
+      } catch (err) {
+        toast.error('Lỗi kết nối khi tải thông tin tài khoản');
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleUpdateName = async (e) => {
+    e.preventDefault();
+    setNameError('');
+
+    if (!nameForm.full_name.trim()) {
+      setNameError('Vui lòng nhập họ và tên');
+      return;
+    }
+
+    setSavingName(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/me`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ full_name: nameForm.full_name.trim() })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setNameError(data.error || data.message || 'Cập nhật tên thất bại');
+        return;
+      }
+
+      const updatedUser = data.user || { ...profile, full_name: nameForm.full_name.trim() };
+      setProfile(updatedUser);
+      onUserUpdate(updatedUser);
+      toast.success('Đã cập nhật họ tên thành công');
+    } catch (err) {
+      toast.error('Lỗi kết nối khi cập nhật họ tên');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (!passwordForm.current_password || !passwordForm.new_password) {
+      setPasswordError('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới');
+      return;
+    }
+
+    if (passwordForm.new_password.length < 6) {
+      setPasswordError('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/me/password`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(passwordForm)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordError(data.error || data.message || 'Đổi mật khẩu thất bại');
+        return;
+      }
+
+      setPasswordForm({ current_password: '', new_password: '' });
+      toast.success('Đổi mật khẩu thành công');
+    } catch (err) {
+      toast.error('Lỗi kết nối khi đổi mật khẩu');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-8 space-y-6">
+      <div className="flex items-center justify-between bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Thông tin tài khoản</h1>
+          <p className="text-xs text-slate-400">Chỉnh sửa họ tên và đổi mật khẩu từ một trang riêng</p>
+        </div>
+        <button
+          onClick={onBack}
+          className="px-4 py-2.5 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-xs font-medium text-white border border-slate-600/50"
+        >
+          Quay lại
+        </button>
+      </div>
+
+      {loadingProfile ? (
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-400">
+          Đang tải thông tin người dùng...
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+                <User className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Thông tin hiện tại</h2>
+                <p className="text-xs text-slate-400">Xem thông tin tài khoản đang đăng nhập</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4 border-b border-slate-700/60 pb-3">
+                <span className="text-slate-400">Họ và tên</span>
+                <span className="text-white font-medium text-right">{profile?.full_name}</span>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-700/60 pb-3">
+                <span className="text-slate-400">Email</span>
+                <span className="text-white font-medium text-right break-all">{profile?.email}</span>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-slate-700/60 pb-3">
+                <span className="text-slate-400">Vai trò</span>
+                <span className="text-white font-medium capitalize text-right">{profile?.role}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-slate-400">Ngày tạo</span>
+                <span className="text-white font-medium text-right">
+                  {profile?.created_at ? new Date(profile.created_at).toLocaleString('vi-VN') : 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <form onSubmit={handleUpdateName} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">Đổi họ tên</h2>
+                <p className="text-xs text-slate-400">Tên hiển thị sẽ được cập nhật ngay trong giao diện</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Họ và tên mới</label>
+                <input
+                  type="text"
+                  value={nameForm.full_name}
+                  onChange={(e) => setNameForm({ full_name: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/70 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+                {nameError && <p className="text-[11px] text-rose-400 mt-1">{nameError}</p>}
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingName}
+                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium disabled:opacity-50"
+              >
+                {savingName ? 'Đang lưu...' : 'Cập nhật họ tên'}
+              </button>
+            </form>
+
+            <form onSubmit={handleChangePassword} className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">Đổi mật khẩu</h2>
+                <p className="text-xs text-slate-400">Nhập mật khẩu hiện tại và mật khẩu mới</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Mật khẩu hiện tại</label>
+                <input
+                  type="password"
+                  value={passwordForm.current_password}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, current_password: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/70 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Mật khẩu mới</label>
+                <input
+                  type="password"
+                  value={passwordForm.new_password}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, new_password: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/70 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {passwordError && <p className="text-[11px] text-rose-400">{passwordError}</p>}
+
+              <button
+                type="submit"
+                disabled={changingPassword}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium disabled:opacity-50"
+              >
+                {changingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+ 2. TRANG MUA SẮM DÀNH CHO CUSTOMER
+ ========================================================================= */
 function CustomerStorefront() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -678,8 +949,8 @@ function CustomerStorefront() {
                   onClick={() => addToCart(p)}
                   disabled={isOutOfStock || isAdding}
                   className={`mt-4 w-full py-2.5 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 ${isOutOfStock
-                      ? 'bg-slate-700/50 text-slate-500 border border-slate-700 cursor-not-allowed'
-                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-[0.98]'
+                    ? 'bg-slate-700/50 text-slate-500 border border-slate-700 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 active:scale-[0.98]'
                     }`}
                 >
                   {isAdding ? (
@@ -711,12 +982,72 @@ function CustomerStorefront() {
             <div className="space-y-3">
               <div className="divide-y divide-slate-700/50 max-h-60 overflow-y-auto pr-1">
                 {cart.map((item) => (
-                  <div key={item.id || item.product_id} className="py-2.5 flex justify-between items-center text-xs">
-                    <div>
+                  <div key={item.id || item.product_id} className="py-2.5 flex justify-between items-start text-xs">
+                    <div className="pr-4">
                       <p className="font-medium text-white">{item.product_name || item.name}</p>
-                      <p className="text-slate-400">{item.quantity} x {new Intl.NumberFormat('vi-VN').format(item.price)}đ</p>
+                      <p className="text-slate-400 mt-0.5">{item.quantity} x {new Intl.NumberFormat('vi-VN').format(item.price)}đ</p>
+
+                      <div className="mt-2 flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-slate-900/40 px-2 py-1 rounded">
+                          <button
+                            onClick={async () => {
+                              const newQty = item.quantity - 1;
+                              try {
+                                const res = await fetch(`${API_BASE_URL}/cart/items/${item.product_id || item.id}`, {
+                                  method: 'PATCH',
+                                  headers: getAuthHeaders(),
+                                  body: JSON.stringify({ quantity: newQty })
+                                });
+
+                                if (res.ok) {
+                                  if (newQty <= 0) toast.info('🗑️ Đã xóa sản phẩm khỏi giỏ hàng');
+                                  await fetchCart();
+                                } else {
+                                  const d = await res.json();
+                                  toast.error(d.error || 'Không thể cập nhật số lượng');
+                                }
+                              } catch (err) {
+                                toast.error('Lỗi kết nối khi cập nhật giỏ hàng');
+                              }
+                            }}
+                            className="text-slate-300 hover:text-white px-1"
+                            title="Giảm"
+                          >
+                            -
+                          </button>
+
+                          <span className="text-sm font-semibold px-2">{item.quantity}</span>
+
+                          <button
+                            onClick={async () => {
+                              const newQty = item.quantity + 1;
+                              try {
+                                const res = await fetch(`${API_BASE_URL}/cart/items/${item.product_id || item.id}`, {
+                                  method: 'PATCH',
+                                  headers: getAuthHeaders(),
+                                  body: JSON.stringify({ quantity: newQty })
+                                });
+
+                                if (res.ok) {
+                                  await fetchCart();
+                                } else {
+                                  const d = await res.json();
+                                  toast.error(d.error || 'Không thể cập nhật số lượng');
+                                }
+                              } catch (err) {
+                                toast.error('Lỗi kết nối khi cập nhật giỏ hàng');
+                              }
+                            }}
+                            className="text-slate-300 hover:text-white px-1"
+                            title="Tăng"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
+
+                    <div className="flex-shrink-0 flex items-center gap-3">
                       <span className="font-bold text-emerald-400">
                         {new Intl.NumberFormat('vi-VN').format(item.price * item.quantity)}đ
                       </span>
@@ -760,8 +1091,8 @@ function CustomerStorefront() {
                 onClick={handleCheckout}
                 disabled={cart.length === 0 || checkoutStatus.loading}
                 className={`w-full py-2.5 text-xs font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2 ${cart.length === 0 || checkoutStatus.loading
-                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30 active:scale-[0.98]'
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30 active:scale-[0.98]'
                   }`}
               >
                 {checkoutStatus.loading ? 'Đang xử lý...' : 'Tiến Hành Đặt Hàng'}
@@ -775,15 +1106,15 @@ function CustomerStorefront() {
 }
 
 /* =========================================================================
-   3. TRANG DASHBOARD QUẢN LÝ DÀNH CHO ADMIN (NÂNG CẤP SIDEBAR & USER ROLES)
-   ========================================================================= */
+ 3. TRANG DASHBOARD QUẢN LÝ DÀNH CHO ADMIN (NÂNG CẤP SIDEBAR & USER ROLES)
+ ========================================================================= */
 function AdminDashboard() {
-  // Tab hiện tại: 'products' | 'users'
+  // Tab hiện tại: 'products' | 'users' | 'orders'
   const [activeTab, setActiveTab] = useState('products');
 
   /* -----------------------------------------------------------------------
-     STATE CHO QUẢN LÝ SẢN PHẨM
-     ----------------------------------------------------------------------- */
+  STATE CHO QUẢN LÝ SẢN PHẨM
+  ----------------------------------------------------------------------- */
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 5, total: 0, totalPages: 1 });
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -799,13 +1130,24 @@ function AdminDashboard() {
   const [formError, setFormError] = useState('');
 
   /* -----------------------------------------------------------------------
-     STATE CHO QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN
-     ----------------------------------------------------------------------- */
+  STATE CHO QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN
+  ----------------------------------------------------------------------- */
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all'); // 🟢 MỚI: State lọc theo Role ('all' | 'admin' | 'customer')
+  const [roleFilter, setRoleFilter] = useState('all');
   const [updatingRoleId, setUpdatingRoleId] = useState(null);
+
+  /* -----------------------------------------------------------------------
+  STATE CHO QUẢN LÝ ĐƠN HÀNG (MỚI)
+  ----------------------------------------------------------------------- */
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [orderSearch, setOrderSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [loadingOrderDetail, setLoadingOrderDetail] = useState(false);
 
   // Lấy Token từ LocalStorage để thực hiện các Request Admin
   const getAuthHeader = () => {
@@ -814,8 +1156,8 @@ function AdminDashboard() {
   };
 
   /* =======================================================================
-     API CALLS: SẢN PHẨM
-     ======================================================================= */
+  API CALLS: SẢN PHẨM
+  ======================================================================= */
   const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
@@ -877,7 +1219,7 @@ function AdminDashboard() {
 
       const res = await fetch(url, {
         method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...getAuthHeader()
         },
@@ -902,7 +1244,7 @@ function AdminDashboard() {
     if (!window.confirm(`Bạn có chắc muốn xóa sản phẩm "${name || id}"?`)) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/products/${id}`, { 
+      const res = await fetch(`${API_BASE_URL}/products/${id}`, {
         method: 'DELETE',
         headers: getAuthHeader()
       });
@@ -920,8 +1262,8 @@ function AdminDashboard() {
   };
 
   /* =======================================================================
-     API CALLS: NGƯỜI DÙNG & QUẢN LÝ PHÂN QUYỀN
-     ======================================================================= */
+  API CALLS: NGƯỜI DÙNG & QUẢN LÝ PHÂN QUYỀN
+  ======================================================================= */
   const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
@@ -962,7 +1304,7 @@ function AdminDashboard() {
       if (!res.ok) throw new Error(data.error || 'Cập nhật phân quyền thất bại');
 
       toast.success(`🛡️ Đã đổi quyền của "${userName}" thành: ${newRole.toUpperCase()}`);
-      
+
       // Cập nhật trực tiếp State giao diện không cần reload lại toàn bộ
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch (err) {
@@ -972,23 +1314,106 @@ function AdminDashboard() {
     }
   };
 
-  // 🟢 CẬP NHẬT: Lọc người dùng kết hợp Tìm kiếm & Phân quyền (Role)
+  // Lọc người dùng kết hợp Tìm kiếm & Phân quyền (Role)
   const filteredUsers = users.filter(u => {
-    const matchesSearch = 
+    const matchesSearch =
       u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
       u.email?.toLowerCase().includes(userSearch.toLowerCase());
-      
+
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
 
     return matchesSearch && matchesRole;
   });
 
+  /* =======================================================================
+  API CALLS: QUẢN LÝ ĐƠN HÀNG (MỚI)
+  ======================================================================= */
+  const fetchOrders = useCallback(async () => {
+    setLoadingOrders(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/orders`, {
+        headers: getAuthHeader()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(Array.isArray(data) ? data : []);
+      } else {
+        toast.error('Không thể tải danh sách đơn hàng');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi kết nối khi tải đơn hàng');
+    } finally {
+      setLoadingOrders(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [fetchOrders, activeTab]);
+
+  // Xem chi tiết đơn hàng
+  const handleViewOrderDetail = async (orderId) => {
+    setLoadingOrderDetail(true);
+    setIsOrderModalOpen(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/orders/${orderId}`, {
+        headers: getAuthHeader()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedOrder(data);
+      } else {
+        toast.error('Không thể tải chi tiết đơn hàng');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi kết nối khi tải chi tiết đơn hàng');
+    } finally {
+      setLoadingOrderDetail(false);
+    }
+  };
+
+  // Lọc danh sách đơn hàng
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = order.id?.toString().includes(orderSearch) ||
+      order.user_id?.toString().includes(orderSearch);
+    const matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Utility định dạng
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleString('vi-VN');
+  };
+
+  // Render Badge trạng thái
+  const renderStatusBadge = (status) => {
+    const styles = {
+      PAID: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      PENDING: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+      CANCELLED: 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+    };
+    return (
+      <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${styles[status] || 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
+        {status}
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row">
-      
+
       {/* ===================================================================
-          1. LEFT NAVIGATION SIDEBAR
-          =================================================================== */}
+ 1. LEFT NAVIGATION SIDEBAR
+ =================================================================== */}
       <aside className="w-full md:w-64 bg-slate-800/80 border-r border-slate-700/60 p-4 flex flex-col justify-between shrink-0">
         <div className="space-y-6">
           {/* Dashboard Header */}
@@ -1006,11 +1431,10 @@ function AdminDashboard() {
           <nav className="space-y-1.5">
             <button
               onClick={() => setActiveTab('products')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${
-                activeTab === 'products'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                  : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${activeTab === 'products'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
+                }`}
             >
               <Package className="w-4 h-4" />
               <span>Quản Lý Sản Phẩm</span>
@@ -1018,14 +1442,25 @@ function AdminDashboard() {
 
             <button
               onClick={() => setActiveTab('users')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${
-                activeTab === 'users'
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                  : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${activeTab === 'users'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
+                }`}
             >
               <Users className="w-4 h-4" />
               <span>Quản Lý Người Dùng</span>
+            </button>
+
+            {/* 🟢 MỚI: Menu Quản Lý Đơn Hàng */}
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${activeTab === 'orders'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
+                }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Quản Lý Đơn Hàng</span>
             </button>
           </nav>
         </div>
@@ -1037,13 +1472,13 @@ function AdminDashboard() {
       </aside>
 
       {/* ===================================================================
-          2. MAIN CONTENT AREA
-          =================================================================== */}
+ 2. MAIN CONTENT AREA
+ =================================================================== */}
       <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
 
         {/* -----------------------------------------------------------------
-            TAB 1: QUẢN LÝ SẢN PHẨM
-            ----------------------------------------------------------------- */}
+ TAB 1: QUẢN LÝ SẢN PHẨM
+ ----------------------------------------------------------------- */}
         {activeTab === 'products' && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-center bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
@@ -1192,8 +1627,8 @@ function AdminDashboard() {
         )}
 
         {/* -----------------------------------------------------------------
-            TAB 2: QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN (ROLE PERMISSIONS)
-            ----------------------------------------------------------------- */}
+ TAB 2: QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN (ROLE PERMISSIONS)
+ ----------------------------------------------------------------- */}
         {activeTab === 'users' && (
           <div className="space-y-6 animate-fadeIn">
             <div className="flex justify-between items-center bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
@@ -1209,9 +1644,9 @@ function AdminDashboard() {
               </button>
             </div>
 
-            {/* 🟢 BỘ LỌC VÀ TÌM KIẾM NGƯỜI DÙNG */}
+            {/* BỘ LỌC VÀ TÌM KIẾM NGƯỜI DÙNG */}
             <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
-              
+
               {/* Thanh Tìm Kiếm */}
               <div className="relative w-full sm:max-w-md">
                 <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
@@ -1224,37 +1659,34 @@ function AdminDashboard() {
                 />
               </div>
 
-              {/* 🟢 NÚT LỌC THEO ROLE (ALL / ADMIN / CUSTOMER) */}
+              {/* NÚT LỌC THEO ROLE (ALL / ADMIN / CUSTOMER) */}
               <div className="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-xl border border-slate-700/60 w-full sm:w-auto">
                 <button
                   onClick={() => setRoleFilter('all')}
-                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                    roleFilter === 'all'
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${roleFilter === 'all'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   Tất cả ({users.length})
                 </button>
 
                 <button
                   onClick={() => setRoleFilter('admin')}
-                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                    roleFilter === 'admin'
-                      ? 'bg-rose-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${roleFilter === 'admin'
+                    ? 'bg-rose-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   Admin ({users.filter(u => u.role === 'admin').length})
                 </button>
 
                 <button
                   onClick={() => setRoleFilter('customer')}
-                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                    roleFilter === 'customer'
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${roleFilter === 'customer'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   Customer ({users.filter(u => u.role === 'customer').length})
                 </button>
@@ -1327,11 +1759,136 @@ function AdminDashboard() {
           </div>
         )}
 
+        {/* -----------------------------------------------------------------
+ TAB 3: QUẢN LÝ ĐƠN HÀNG (MỚI)
+ ----------------------------------------------------------------- */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex justify-between items-center bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
+              <div>
+                <h1 className="text-2xl font-bold text-white">Quản Lý Đơn Hàng</h1>
+                <p className="text-xs text-slate-400">Xem và kiểm tra toàn bộ đơn hàng trong hệ thống</p>
+              </div>
+              <button
+                onClick={fetchOrders}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-xs rounded-xl"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingOrders ? 'animate-spin' : ''}`} /> Tải lại
+              </button>
+            </div>
+
+            {/* Bộ lọc đơn hàng */}
+            <div className="bg-slate-800/40 p-4 rounded-2xl border border-slate-700/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="relative w-full sm:max-w-md">
+                <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm theo Mã Đơn / User ID..."
+                  value={orderSearch}
+                  onChange={(e) => setOrderSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-xs text-white focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700/60 w-full sm:w-auto">
+                <button
+                  onClick={() => setStatusFilter('ALL')}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${statusFilter === 'ALL'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  Tất cả
+                </button>
+                <button
+                  onClick={() => setStatusFilter('PAID')}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${statusFilter === 'PAID'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  Đã thanh toán
+                </button>
+                <button
+                  onClick={() => setStatusFilter('PENDING')}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${statusFilter === 'PENDING'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  Chờ xử lý
+                </button>
+                <button
+                  onClick={() => setStatusFilter('CANCELLED')}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition ${statusFilter === 'CANCELLED'
+                    ? 'bg-rose-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  Đã hủy
+                </button>
+              </div>
+            </div>
+
+            {/* Bảng đơn hàng */}
+            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden shadow-xl">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase border-b border-slate-700/60">
+                  <tr>
+                    <th className="p-4">Mã Đơn (#ID)</th>
+                    <th className="p-4">User ID</th>
+                    <th className="p-4">Tổng Tiền</th>
+                    <th className="p-4">Trạng Thái</th>
+                    <th className="p-4">Ngày Tạo</th>
+                    <th className="p-4 text-right">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {loadingOrders ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-400">
+                        Đang tải danh sách đơn hàng...
+                      </td>
+                    </tr>
+                  ) : filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-500">
+                        Không tìm thấy đơn hàng nào
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-slate-800/80 transition">
+                        <td className="p-4 font-medium text-indigo-400">#{order.id}</td>
+                        <td className="p-4 text-slate-300">User #{order.user_id}</td>
+                        <td className="p-4 font-semibold text-emerald-400">
+                          {formatCurrency(order.total_amount)}
+                        </td>
+                        <td className="p-4">{renderStatusBadge(order.status)}</td>
+                        <td className="p-4 text-slate-400 text-xs">{formatDate(order.created_at)}</td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleViewOrderDetail(order.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-lg transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Chi tiết
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ===================================================================
-          3. MODAL THÊM / SỬA SẢN PHẨM
-          =================================================================== */}
+ 3. MODAL THÊM / SỬA SẢN PHẨM
+ =================================================================== */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -1402,6 +1959,120 @@ function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+ 4. MODAL CHI TIẾT ĐƠN HÀNG (MỚI)
+ =================================================================== */}
+      {isOrderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
+
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-700 flex items-center justify-between bg-slate-900/50">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                Chi Tiết Đơn Hàng #{selectedOrder?.id}
+              </h2>
+              <button
+                onClick={() => setIsOrderModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-700/50 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              {loadingOrderDetail || !selectedOrder ? (
+                <div className="py-12 text-center text-slate-400">Đang tải thông tin chi tiết...</div>
+              ) : (
+                <div className="space-y-6">
+
+                  {/* Thông tin chung */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-indigo-400" />
+                      <div>
+                        <p className="text-xs text-slate-400">Khách hàng</p>
+                        <p className="font-semibold text-white">User #{selectedOrder.user_id}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-indigo-400" />
+                      <div>
+                        <p className="text-xs text-slate-400">Trạng thái</p>
+                        <div style={{ paddingTop: '5px' }}>{renderStatusBadge(selectedOrder.status)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
+                      <Calendar className="w-4 h-4 text-indigo-400" />
+                      <div>
+                        <p className="text-xs text-slate-400">Thời gian tạo</p>
+                        <p className="font-semibold text-white text-xs">{formatDate(selectedOrder.created_at)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bảng sản phẩm trong đơn */}
+                  <div>
+                    <h3 className="text-sm font-bold text-white mb-3">Danh Sách Sản Phẩm</h3>
+                    <div className="border border-slate-700 rounded-xl overflow-hidden">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-900/60 text-slate-400 text-xs uppercase border-b border-slate-700">
+                          <tr>
+                            <th className="py-2.5 px-3">Sản phẩm</th>
+                            <th className="py-2.5 px-3 text-center">Số lượng</th>
+                            <th className="py-2.5 px-3 text-right">Đơn giá</th>
+                            <th className="py-2.5 px-3 text-right">Thành tiền</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                          {selectedOrder.items?.map((item) => (
+                            <tr key={item.id}>
+                              <td className="py-3 px-3">
+                                {/* Hiển thị Tên sản phẩm chính + ID nhỏ ở dưới */}
+                                <div className="font-medium text-white">
+                                  {item.product_name || `Sản phẩm #${item.product_id}`}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  ID: #{item.product_id}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-center text-slate-300">x{item.quantity}</td>
+                              <td className="py-3 px-3 text-right text-slate-300">{formatCurrency(item.price)}</td>
+                              <td className="py-3 px-3 text-right font-medium text-emerald-400">
+                                {formatCurrency(item.price * item.quantity)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {/* Tổng tiền */}
+                  <div className="flex justify-between items-center pt-3 border-t border-slate-700">
+                    <span className="font-bold text-white">Tổng Cộng Đơn Hàng:</span>
+                    <span className="text-xl font-extrabold text-emerald-400">
+                      {formatCurrency(selectedOrder.total_amount)}
+                    </span>
+                  </div>
+
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-slate-900/50 border-t border-slate-700 flex justify-end">
+              <button
+                onClick={() => setIsOrderModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-slate-700 hover:bg-slate-600 rounded-xl shadow-sm transition"
+              >
+                Đóng
+              </button>
+            </div>
+
           </div>
         </div>
       )}

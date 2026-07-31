@@ -62,6 +62,23 @@ func (r *ShoppingRepository) RemoveCartItem(ctx context.Context, userID, product
 	return err
 }
 
+// Thiết lập số lượng cho một mục trong giỏ hàng (nếu quantity <= 0 thì xóa mục)
+func (r *ShoppingRepository) SetCartItemQuantity(ctx context.Context, userID, productID int64, quantity int) error {
+	if quantity <= 0 {
+		return r.RemoveCartItem(ctx, userID, productID)
+	}
+
+	// Cập nhật nếu tồn tại, nếu không thì chèn mới
+	query := `
+		INSERT INTO cart_items (user_id, product_id, quantity)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, product_id)
+		DO UPDATE SET quantity = EXCLUDED.quantity
+	`
+	_, err := r.db.ExecContext(ctx, query, userID, productID, quantity)
+	return err
+}
+
 // ------------------- CHECKOUT TRANSACTION -------------------
 
 func (r *ShoppingRepository) Checkout(ctx context.Context, userID int64) (*domain.Order, error) {
@@ -163,4 +180,89 @@ func (r *ShoppingRepository) Checkout(ctx context.Context, userID int64) (*domai
 		TotalAmount: totalAmount,
 		Status:      "PAID",
 	}, nil
+}
+
+// ------------------- ADMIN ORDER MANAGEMENT -------------------
+
+// Lấy danh sách tất cả các đơn hàng hệ thống
+func (r *ShoppingRepository) GetAllOrders(ctx context.Context) ([]domain.Order, error) {
+	query := `
+		SELECT id, user_id, total_amount, status, created_at
+		FROM orders
+		ORDER BY created_at DESC
+	`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	orders := []domain.Order{}
+	for rows.Next() {
+		var o domain.Order
+		if err := rows.Scan(&o.ID, &o.UserID, &o.TotalAmount, &o.Status, &o.CreatedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, nil
+}
+
+// Lấy chi tiết 1 đơn hàng kèm danh sách sản phẩm
+func (r *ShoppingRepository) GetOrderByID(ctx context.Context, orderID int64) (*domain.Order, error) {
+    // 1. Lấy thông tin order cơ bản
+    orderQuery := `
+        SELECT id, user_id, total_amount, status, created_at
+        FROM orders
+        WHERE id = $1
+    `
+    var order domain.Order
+    err := r.db.QueryRowContext(ctx, orderQuery, orderID).Scan(
+        &order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.CreatedAt,
+    )
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            return nil, errors.New("không tìm thấy đơn hàng")
+        }
+        return nil, err
+    }
+
+    // 🟢 2. CẬP NHẬT: Thêm LEFT JOIN p.name và bổ sung COALESCE phòng trường hợp sp đã bị xóa
+    itemsQuery := `
+        SELECT 
+            oi.id, 
+            oi.order_id, 
+            oi.product_id, 
+            COALESCE(p.name, 'Sản phẩm không tồn tại') AS product_name, 
+            oi.quantity, 
+            oi.price
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
+    `
+    rows, err := r.db.QueryContext(ctx, itemsQuery, orderID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var items []domain.OrderItem
+    for rows.Next() {
+        var item domain.OrderItem
+        // 🟢 CẬP NHẬT: Thêm &item.ProductName vào đúng vị trí thứ 4 tương ứng với SQL
+        if err := rows.Scan(
+            &item.ID, 
+            &item.OrderID, 
+            &item.ProductID, 
+            &item.ProductName, // 👈 Thêm biến này ở đây
+            &item.Quantity, 
+            &item.Price,
+        ); err != nil {
+            return nil, err
+        }
+        items = append(items, item)
+    }
+
+    order.Items = items
+    return &order, nil
 }

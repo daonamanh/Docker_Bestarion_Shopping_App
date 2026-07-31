@@ -12,6 +12,7 @@ var (
 	ErrUserNotFound       = errors.New("không tìm thấy người dùng")
 	ErrInvalidCredentials = errors.New("email hoặc mật khẩu không chính xác")
 	ErrInvalidToken       = errors.New("mã khôi phục không hợp lệ hoặc đã hết hạn")
+	ErrInvalidCurrentPassword = errors.New("mật khẩu hiện tại không chính xác")
 )
 
 // User định nghĩa cấu trúc dữ liệu người dùng trong CSDL
@@ -53,6 +54,17 @@ type UpdateRoleReq struct {
 	Role string `json:"role" binding:"required,oneof=admin customer"`
 }
 
+// UpdateProfileReq DTO cập nhật họ tên người dùng
+type UpdateProfileReq struct {
+	FullName string `json:"full_name" binding:"required"`
+}
+
+// ChangePasswordReq DTO đổi mật khẩu khi đã đăng nhập
+type ChangePasswordReq struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=6"`
+}
+
 // AuthResponse DTO trả về Token và thông tin User sau khi Auth thành công
 type AuthResponse struct {
 	Token string `json:"token"`
@@ -65,6 +77,7 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id int64) (*User, error)
 	UpdatePassword(ctx context.Context, userID int64, newPasswordHash string) error
+	UpdateFullName(ctx context.Context, userID int64, fullName string) error
 
 	// 🟢 MỚI: Phương thức quản lý Admin
 	GetAll(ctx context.Context) ([]User, error)
