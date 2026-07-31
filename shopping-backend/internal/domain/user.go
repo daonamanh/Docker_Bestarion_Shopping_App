@@ -2,7 +2,16 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+// 🟢 MỚI: Khai báo các biến lỗi chuẩn cho toàn hệ thống
+var (
+	ErrEmailAlreadyExists = errors.New("email đã tồn tại trên hệ thống")
+	ErrUserNotFound       = errors.New("không tìm thấy người dùng")
+	ErrInvalidCredentials = errors.New("email hoặc mật khẩu không chính xác")
+	ErrInvalidToken       = errors.New("mã khôi phục không hợp lệ hoặc đã hết hạn")
 )
 
 // User định nghĩa cấu trúc dữ liệu người dùng trong CSDL
@@ -28,17 +37,22 @@ type LoginReq struct {
 	Password string `json:"password" binding:"required"`
 }
 
-// 🟢 MỚI: DTO Yêu cầu quên mật khẩu
+// ForgotPasswordReq DTO Yêu cầu quên mật khẩu
 type ForgotPasswordReq struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
-// 🟢 MỚI: DTO Đặt lại mật khẩu mới
+// ResetPasswordReq DTO Đặt lại mật khẩu mới
 type ResetPasswordReq struct {
 	Email       string `json:"email" binding:"required,email"`
 	Token       string `json:"token" binding:"required,len=6"`
 	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
+// 🟢 MỚI: DTO cập nhật Role
+type UpdateRoleReq struct {
+	Role string `json:"role" binding:"required,oneof=admin customer"`
+}
+
 // AuthResponse DTO trả về Token và thông tin User sau khi Auth thành công
 type AuthResponse struct {
 	Token string `json:"token"`
@@ -50,6 +64,9 @@ type UserRepository interface {
 	Create(ctx context.Context, u *User) error
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id int64) (*User, error)
-	// 🟢 MỚI: Phương thức cập nhật mật khẩu
 	UpdatePassword(ctx context.Context, userID int64, newPasswordHash string) error
+
+	// 🟢 MỚI: Phương thức quản lý Admin
+	GetAll(ctx context.Context) ([]User, error)
+	UpdateRole(ctx context.Context, userID int64, role string) error
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"shopping-backend/internal/domain"
@@ -59,6 +60,33 @@ func (h *ShoppingHandler) AddToCart(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Đã thêm vào giỏ hàng thành công"})
+}
+
+func (h *ShoppingHandler) RemoveFromCart(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		return
+	}
+
+	pidParam := c.Param("product_id")
+	if pidParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id is required"})
+		return
+	}
+
+	productID, err := strconv.ParseInt(pidParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id must be a number"})
+		return
+	}
+
+	if err := h.service.RemoveCartItem(c.Request.Context(), userID, productID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Đã xóa sản phẩm khỏi giỏ hàng"})
 }
 
 func (h *ShoppingHandler) Checkout(c *gin.Context) {
