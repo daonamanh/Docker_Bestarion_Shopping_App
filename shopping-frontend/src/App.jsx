@@ -4,7 +4,7 @@ import {
   ArrowUpDown, RefreshCw, ShoppingBag,
   X, Check, LogOut, ShoppingCart, User, Key, Mail,
   AlertCircle, CheckCircle, ArrowLeft, Send, ShieldCheck,
-  ShieldAlert, UserCheck,
+  ShieldAlert, UserCheck, Menu,
   Package, Users, Eye, Filter, Calendar, CreditCard, Image, Upload // 👈 Đã thêm icon Upload & Image mới
 } from 'lucide-react';
 
@@ -50,7 +50,7 @@ export default function App() {
         <>
           {/* Top Navbar */}
           <nav className="bg-slate-800/80 border-b border-slate-700/60 sticky top-0 z-40 backdrop-blur-md">
-            <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
                   <ShoppingBag className="w-5 h-5" />
@@ -66,7 +66,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="text-right hidden sm:block">
                   <p className="text-xs font-semibold text-white">{user.full_name}</p>
                   <p className="text-xs text-slate-400">{user.email}</p>
@@ -803,6 +803,14 @@ function CustomerStorefront() {
   const [addingId, setAddingId] = useState(null);
   const [checkoutStatus, setCheckoutStatus] = useState({ loading: false, error: null, success: false });
 
+  // 🟢 State cho Quản lý Đơn hàng Cá nhân của Customer
+  const [customerTab, setCustomerTab] = useState('shop'); // 'shop' | 'my_orders'
+  const [myOrders, setMyOrders] = useState([]);
+  const [loadingMyOrders, setLoadingMyOrders] = useState(false);
+  const [selectedMyOrder, setSelectedMyOrder] = useState(null);
+  const [isMyOrderModalOpen, setIsMyOrderModalOpen] = useState(false);
+  const [loadingMyOrderDetail, setLoadingMyOrderDetail] = useState(false);
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return {
@@ -831,17 +839,62 @@ function CustomerStorefront() {
       });
       if (res.ok) {
         const data = await res.json();
-        setCart(data || []);
+        const sortedItems = (data || []).sort((a, b) => (a.id || 0) - (b.id || 0));
+        setCart(sortedItems);
       }
     } catch (err) {
       console.error('Lỗi tải giỏ hàng:', err);
     }
   };
 
+  const fetchMyOrders = useCallback(async () => {
+    setLoadingMyOrders(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/my/orders`, {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyOrders(data || []);
+      }
+    } catch (err) {
+      console.error('Lỗi tải đơn hàng cá nhân:', err);
+    } finally {
+      setLoadingMyOrders(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProducts();
     fetchCart();
-  }, []);
+    fetchMyOrders();
+  }, [fetchMyOrders]);
+
+  useEffect(() => {
+    if (customerTab === 'my_orders') {
+      fetchMyOrders();
+    }
+  }, [customerTab, fetchMyOrders]);
+
+  const handleViewMyOrderDetails = async (orderId) => {
+    setLoadingMyOrderDetail(true);
+    setIsMyOrderModalOpen(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/my/orders/${orderId}`, {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedMyOrder(data);
+      } else {
+        toast.error('Cannot load order receipt details');
+      }
+    } catch (err) {
+      toast.error('Network error loading order details');
+    } finally {
+      setLoadingMyOrderDetail(false);
+    }
+  };
 
   const addToCart = async (product) => {
     if (product.stock <= 0) return;
@@ -889,6 +942,7 @@ function CustomerStorefront() {
         setCheckoutStatus({ loading: false, error: null, success: true });
         setCart([]);
         fetchProducts();
+        fetchMyOrders();
       } else {
         toast.error(`❌ ${data.error || 'Checkout failed'}`);
         setCheckoutStatus({ loading: false, error: data.error || 'Checkout failed', success: false });
@@ -901,22 +955,131 @@ function CustomerStorefront() {
 
   const totalCartPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
-      <div className="flex justify-between items-center bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
+      <div className="flex justify-between items-center bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Product Store</h1>
-          <p className="text-xs text-slate-400">Choose your favorite products and add them to the cart</p>
+          <p className="text-xs text-slate-400">Choose your favorite products or view your past orders</p>
         </div>
-        <div className="flex items-center gap-2 bg-indigo-600/20 text-indigo-400 px-4 py-2 rounded-xl border border-indigo-500/30">
-          <ShoppingCart className="w-5 h-5" />
-          <span className="font-bold text-sm">{cart.reduce((sum, i) => sum + i.quantity, 0)} items</span>
+
+        <div className="flex items-center gap-3 flex-wrap max-w-full">
+          <div className="flex bg-slate-900/80 p-1 rounded-xl border border-slate-700/60 text-xs flex-wrap max-w-full">
+            <button
+              onClick={() => setCustomerTab('shop')}
+              className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${customerTab === 'shop' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              <ShoppingBag className="w-4 h-4" /> Shop Catalog
+            </button>
+            <button
+              onClick={() => setCustomerTab('my_orders')}
+              className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${customerTab === 'my_orders' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                }`}
+            >
+              <Package className="w-4 h-4" /> My Orders ({myOrders.length})
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 bg-indigo-600/20 text-indigo-400 px-4 py-2 rounded-xl border border-indigo-500/30">
+            <ShoppingCart className="w-5 h-5" />
+            <span className="font-bold text-sm">{cart.reduce((sum, i) => sum + i.quantity, 0)} items</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {customerTab === 'my_orders' ? (
+        /* ==================== MÀN HÌNH ĐƠN HÀNG CÁ NHÂN ==================== */
+        <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden shadow-xl p-6 space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-700/60 pb-4">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Package className="w-5 h-5 text-indigo-400" /> My Order History
+              </h2>
+              <p className="text-xs text-slate-400">View all orders placed with your account</p>
+            </div>
+            <button
+              onClick={fetchMyOrders}
+              className="p-2 bg-slate-900/60 border border-slate-700 rounded-xl hover:bg-slate-700/50 transition"
+              title="Refresh Orders"
+            >
+              <RefreshCw className={`w-4 h-4 text-slate-300 ${loadingMyOrders ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px] text-left text-sm">
+              <thead className="bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase border-b border-slate-700/60">
+                <tr>
+                  <th className="p-4">Order ID</th>
+                  <th className="p-4">Date</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4">Total Amount</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                {loadingMyOrders ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-400">
+                      Loading your order history...
+                    </td>
+                  </tr>
+                ) : myOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-500">
+                      No orders placed yet
+                    </td>
+                  </tr>
+                ) : (
+                  myOrders.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-slate-800/80 transition">
+                      <td className="p-4 font-mono font-bold text-indigo-400">#{ord.id}</td>
+                      <td className="p-4 text-slate-300 text-xs">{formatDate(ord.created_at)}</td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-1 text-xs rounded-full font-semibold border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                          {ord.status || 'PAID'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-emerald-400 font-bold">
+                        {formatCurrency(ord.total_amount)}
+                      </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => handleViewMyOrderDetails(ord.id)}
+                          className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-xl transition text-xs font-medium inline-flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* ==================== MÀN HÌNH DANH SÁCH SẢN PHẨM ==================== */
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Danh sách sản phẩm dạng Thẻ Grid */}
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {loading ? (
             <div className="col-span-2 text-center py-12 text-slate-400">Loading products...</div>
           ) : products.map((p) => {
@@ -1007,7 +1170,7 @@ function CustomerStorefront() {
             <p className="text-xs text-slate-500 py-6 text-center">Your cart is empty</p>
           ) : (
             <div className="space-y-3">
-              <div className="divide-y divide-slate-700/50 max-h-60 overflow-y-auto pr-1">
+              <div className="divide-y divide-slate-700/50 max-h-[30rem] overflow-y-auto pr-1">
                 {cart.map((item) => (
                   <div key={item.id || item.product_id} className="py-2.5 flex justify-between items-start text-xs">
                     <div className="pr-4">
@@ -1128,6 +1291,102 @@ function CustomerStorefront() {
           )}
         </div>
       </div>
+      )}
+
+      {/* MODAL XEM CHI TIẾT ĐƠN HÀNG CÁ NHÂN */}
+      {isMyOrderModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-slate-700 pb-3">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-indigo-400" />
+                <h3 className="font-bold text-lg text-white">
+                  Order Receipt {selectedMyOrder ? `#${selectedMyOrder.id}` : ''}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsMyOrderModalOpen(false);
+                  setSelectedMyOrder(null);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {loadingMyOrderDetail ? (
+              <div className="p-8 text-center text-slate-400 text-sm">
+                Loading order receipt details...
+              </div>
+            ) : !selectedMyOrder ? (
+              <div className="p-8 text-center text-rose-400 text-sm">
+                Order details unavailable
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Thông tin chung */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-700/60">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Order ID</p>
+                    <p className="font-mono font-bold text-indigo-400 text-sm">#{selectedMyOrder.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Status</p>
+                    <span className="px-2 py-0.5 text-[10px] rounded-full font-bold border bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                      {selectedMyOrder.status || 'PAID'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Created At</p>
+                    <p className="font-semibold text-white text-xs">{formatDate(selectedMyOrder.created_at)}</p>
+                  </div>
+                </div>
+
+                {/* Bảng sản phẩm trong đơn */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Purchased Products</h4>
+                  <div className="border border-slate-700/60 rounded-xl overflow-x-auto">
+                    <table className="w-full min-w-[500px] text-left text-xs">
+                      <thead className="bg-slate-900/80 text-slate-400 uppercase font-semibold border-b border-slate-700/60">
+                        <tr>
+                          <th className="py-2.5 px-3">Product Name</th>
+                          <th className="py-2.5 px-3 text-center">Quantity</th>
+                          <th className="py-2.5 px-3 text-right">Unit Price</th>
+                          <th className="py-2.5 px-3 text-right">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {selectedMyOrder.items?.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-800/60">
+                            <td className="py-3 px-3">
+                              <p className="font-medium text-white">{item.product_name || `Product #${item.product_id}`}</p>
+                              <p className="text-[10px] text-slate-500">ID: #{item.product_id}</p>
+                            </td>
+                            <td className="py-3 px-3 text-center font-bold text-slate-300">x{item.quantity}</td>
+                            <td className="py-3 px-3 text-right text-slate-300">{formatCurrency(item.price)}</td>
+                            <td className="py-3 px-3 text-right font-bold text-emerald-400">
+                              {formatCurrency(item.price * item.quantity)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Tổng tiền */}
+                <div className="flex justify-between items-center pt-2 border-t border-slate-700">
+                  <span className="text-xs font-bold text-slate-300">Grand Total:</span>
+                  <span className="text-base font-bold text-emerald-400">
+                    {formatCurrency(selectedMyOrder.total_amount)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1138,6 +1397,8 @@ function CustomerStorefront() {
 function AdminDashboard() {
   // Tab hiện tại: 'products' | 'users' | 'orders'
   const [activeTab, setActiveTab] = useState('products');
+  // State ẩn/hiện Sidebar menu khi màn hình nhỏ (Mobile)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   /* -----------------------------------------------------------------------
   STATE CHO QUẢN LÝ SẢN PHẨM
@@ -1467,12 +1728,23 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col min-[950px]:flex-row">
+
+      {/* Mobile Toggle Bar */}
+      <div className="min-[950px]:hidden bg-slate-800/90 border-b border-slate-700/80 px-4 py-2.5 flex justify-start items-center sticky top-0 z-30 backdrop-blur-md">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold transition"
+        >
+          {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          <span>{isSidebarOpen ? 'Hide Menu' : 'Menu'}</span>
+        </button>
+      </div>
 
       {/* ===================================================================
  1. LEFT NAVIGATION SIDEBAR
  =================================================================== */}
-      <aside className="w-full md:w-64 bg-slate-800/80 border-r border-slate-700/60 p-4 flex flex-col justify-between shrink-0">
+      <aside className={`w-full min-[950px]:w-64 bg-slate-800/80 border-r border-slate-700/60 p-4 flex-col justify-between shrink-0 ${isSidebarOpen ? 'flex' : 'hidden min-[950px]:flex'}`}>
         <div className="space-y-6">
           {/* Dashboard Header */}
           <div className="flex items-center gap-3 px-3 py-2 border-b border-slate-700/50 pb-4">
@@ -1488,7 +1760,10 @@ function AdminDashboard() {
           {/* Navigation Menu */}
           <nav className="space-y-1.5">
             <button
-              onClick={() => setActiveTab('products')}
+              onClick={() => {
+                setActiveTab('products');
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${activeTab === 'products'
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                 : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
@@ -1499,7 +1774,10 @@ function AdminDashboard() {
             </button>
 
             <button
-              onClick={() => setActiveTab('users')}
+              onClick={() => {
+                setActiveTab('users');
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${activeTab === 'users'
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                 : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
@@ -1511,7 +1789,10 @@ function AdminDashboard() {
 
             {/* 🟢 MỚI: Menu Quản Lý Đơn Hàng */}
             <button
-              onClick={() => setActiveTab('orders')}
+              onClick={() => {
+                setActiveTab('orders');
+                setIsSidebarOpen(false);
+              }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition ${activeTab === 'orders'
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                 : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
@@ -1608,8 +1889,8 @@ function AdminDashboard() {
             </div>
 
             {/* Bảng Dữ Liệu Sản Phẩm */}
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden shadow-xl">
-              <table className="w-full text-left text-sm">
+            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-x-auto shadow-xl">
+              <table className="w-full min-w-[650px] text-left text-sm">
                 <thead className="bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase border-b border-slate-700/60">
                   <tr>
                     <th className="p-4 w-16">Picture</th>
@@ -1774,8 +2055,8 @@ function AdminDashboard() {
             </div>
 
             {/* Bảng Phân Quyền Người Dùng */}
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden shadow-xl">
-              <table className="w-full text-left text-sm">
+            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-x-auto shadow-xl">
+              <table className="w-full min-w-[650px] text-left text-sm">
                 <thead className="bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase border-b border-slate-700/60">
                   <tr>
                     <th className="p-4">ID</th>
@@ -1910,8 +2191,8 @@ function AdminDashboard() {
             </div>
 
             {/* Bảng đơn hàng */}
-            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden shadow-xl">
-              <table className="w-full text-left text-sm">
+            <div className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-x-auto shadow-xl">
+              <table className="w-full min-w-[650px] text-left text-sm">
                 <thead className="bg-slate-900/60 text-slate-400 text-xs font-semibold uppercase border-b border-slate-700/60">
                   <tr>
                     <th className="p-4">Order ID</th>
@@ -2173,8 +2454,8 @@ function AdminDashboard() {
                   {/* Bảng sản phẩm trong đơn */}
                   <div>
                     <h3 className="text-sm font-bold text-white mb-3">Product List</h3>
-                    <div className="border border-slate-700 rounded-xl overflow-hidden">
-                      <table className="w-full text-left text-sm">
+                    <div className="border border-slate-700 rounded-xl overflow-x-auto">
+                      <table className="w-full min-w-[500px] text-left text-sm">
                         <thead className="bg-slate-900/60 text-slate-400 text-xs uppercase border-b border-slate-700">
                           <tr>
                             <th className="py-2.5 px-3">Product</th>
