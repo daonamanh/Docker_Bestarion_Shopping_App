@@ -145,7 +145,7 @@ func (s *userService) ForgotPassword(ctx context.Context, req domain.ForgotPassw
 		return "", err
 	}
 
-	fmt.Printf("[FORGOT PASSWORD] Mã OTP 6 số cho %s: %s | Signed Token: %s\n", user.Email, otpCode, signedToken)
+	fmt.Printf("[FORGOT PASSWORD] 6 digits code for %s: %s | Signed Token: %s\n", user.Email, otpCode, signedToken)
 
 	return otpCode, nil
 }

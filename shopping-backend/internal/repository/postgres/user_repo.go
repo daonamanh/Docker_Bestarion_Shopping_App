@@ -48,7 +48,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	err := r.db.QueryRowContext(ctx, query, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Role, &u.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("người dùng không tồn tại")
+			return nil, errors.New("User not found with the given email")
 		}
 		return nil, err
 	}

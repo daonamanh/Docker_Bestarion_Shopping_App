@@ -123,7 +123,7 @@ func (r *ShoppingRepository) Checkout(ctx context.Context, userID int64) (*domai
 
 		// ⚠️ KIỂM TRA TỒN KHO: Nếu không đủ stock -> Rollback toàn bộ
 		if item.stock < item.quantity {
-			return nil, fmt.Errorf("sản phẩm '%s' không đủ tồn kho (còn %d, trong giỏ %d)", item.name, item.stock, item.quantity)
+			return nil, fmt.Errorf("Product '%s' does not have enough stock (available: %d, in cart: %d)", item.name, item.stock, item.quantity)
 		}
 
 		totalAmount += item.price * float64(item.quantity)
@@ -131,7 +131,7 @@ func (r *ShoppingRepository) Checkout(ctx context.Context, userID int64) (*domai
 	}
 
 	if len(items) == 0 {
-		return nil, errors.New("giỏ hàng của bạn đang trống")
+		return nil, errors.New("Your cart is empty")
 	}
 
 	// 3. Tạo Đơn Hàng mới (orders)
@@ -223,7 +223,7 @@ func (r *ShoppingRepository) GetOrderByID(ctx context.Context, orderID int64) (*
     )
     if err != nil {
         if errors.Is(err, sql.ErrNoRows) {
-            return nil, errors.New("không tìm thấy đơn hàng")
+            return nil, errors.New("Cannot find order with the given ID")
         }
         return nil, err
     }
@@ -234,7 +234,7 @@ func (r *ShoppingRepository) GetOrderByID(ctx context.Context, orderID int64) (*
             oi.id, 
             oi.order_id, 
             oi.product_id, 
-            COALESCE(p.name, 'Sản phẩm không tồn tại') AS product_name, 
+            COALESCE(p.name, 'Product not found') AS product_name, 
             oi.quantity, 
             oi.price
         FROM order_items oi
@@ -308,7 +308,7 @@ func (r *ShoppingRepository) GetUserOrderByID(ctx context.Context, orderID int64
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn hàng này")
+			return nil, errors.New("Cannot find order with the given ID for this user")
 		}
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func (r *ShoppingRepository) GetUserOrderByID(ctx context.Context, orderID int64
 			oi.id, 
 			oi.order_id, 
 			oi.product_id, 
-			COALESCE(p.name, 'Sản phẩm không tồn tại') AS product_name, 
+			COALESCE(p.name, 'Product not found') AS product_name, 
 			oi.quantity, 
 			oi.price
 		FROM order_items oi

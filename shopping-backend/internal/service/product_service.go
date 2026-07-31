@@ -17,10 +17,10 @@ func NewProductService(repo domain.ProductRepository) domain.ProductService {
 func (s *productService) CreateProduct(ctx context.Context, p *domain.Product) error {
 	// Business validation logic
 	if p.Name == "" {
-		return errors.New("tên sản phẩm không được để trống")
+		return errors.New("Product name cannot be empty")
 	}
 	if p.Price <= 0 {
-		return errors.New("giá sản phẩm phải lớn hơn 0")
+		return errors.New("Product price must be greater than 0")
 	}
 
 	return s.repo.Create(ctx, p)
@@ -59,7 +59,7 @@ func (s *productService) GetProducts(ctx context.Context, q domain.ProductQuery)
 // GetProductByID lấy chi tiết 1 sản phẩm theo ID
 func (s *productService) GetProductByID(ctx context.Context, id int64) (*domain.Product, error) {
 	if id <= 0 {
-		return nil, errors.New("ID sản phẩm không hợp lệ")
+		return nil, errors.New("Invalid product ID")
 	}
 	return s.repo.GetByID(ctx, id)
 }
@@ -67,25 +67,26 @@ func (s *productService) GetProductByID(ctx context.Context, id int64) (*domain.
 // UpdateProduct kiểm tra validate và cập nhật thông tin sản phẩm
 func (s *productService) UpdateProduct(ctx context.Context, id int64, p *domain.Product) (*domain.Product, error) {
 	if id <= 0 {
-		return nil, errors.New("ID sản phẩm không hợp lệ")
+		return nil, errors.New("Invalid product ID")
 	}
 
 	// 1. Kiểm tra sản phẩm có tồn tại trong CSDL không
 	existing, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil, errors.New("không tìm thấy sản phẩm cần cập nhật")
+		return nil, errors.New("Product not found")
 	}
 
 	// 2. Validate dữ liệu đầu vào
 	if p.Name == "" {
-		return nil, errors.New("tên sản phẩm không được để trống")
+		return nil, errors.New("Product name cannot be empty")
 	}
 	if p.Price <= 0 {
-		return nil, errors.New("giá sản phẩm phải lớn hơn 0")
+		return nil, errors.New("Product price must be greater than 0")
 	}
 
 	// 3. Cập nhật các trường thông tin mới
 	existing.Name = p.Name
+	existing.Category = p.Category // 🟢 MỚI
 	existing.Price = p.Price
 	existing.Stock = p.Stock
 	existing.ImageURL = p.ImageURL
@@ -101,14 +102,19 @@ func (s *productService) UpdateProduct(ctx context.Context, id int64, p *domain.
 // DeleteProduct xóa sản phẩm theo ID
 func (s *productService) DeleteProduct(ctx context.Context, id int64) error {
 	if id <= 0 {
-		return errors.New("ID sản phẩm không hợp lệ")
+		return errors.New("Invalid product ID")
 	}
 
 	// Kiểm tra sản phẩm có tồn tại trước khi xóa
 	_, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return errors.New("không tìm thấy sản phẩm để xóa")
+		return errors.New("Product not found")
 	}
 
 	return s.repo.Delete(ctx, id)
+}
+
+// 🟢 MỚI: Hàm lấy danh sách Categories
+func (s *productService) GetCategories(ctx context.Context) ([]string, error) {
+	return s.repo.GetCategories(ctx)
 }

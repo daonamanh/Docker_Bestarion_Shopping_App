@@ -11,11 +11,11 @@ import (
 func InitDB(connStr string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		return nil, fmt.Errorf("lỗi kết nối cơ sở dữ liệu: %w", err)
+		return nil, fmt.Errorf("Error connecting to database: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("không thể ping tới cơ sở dữ liệu: %w", err)
+		return nil, fmt.Errorf("Error pinging database: %w", err)
 	}
 
 	return db, nil

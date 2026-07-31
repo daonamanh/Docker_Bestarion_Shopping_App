@@ -43,7 +43,7 @@ func (h *ShoppingHandler) GetCart(c *gin.Context) {
 func (h *ShoppingHandler) AddToCart(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or unauthenticated user"})
 		return
 	}
 
@@ -59,19 +59,19 @@ func (h *ShoppingHandler) AddToCart(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Đã thêm vào giỏ hàng thành công"})
+	c.JSON(http.StatusOK, gin.H{"message": "Added to cart successfully"})
 }
 
 func (h *ShoppingHandler) RemoveFromCart(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or unauthenticated user"})
 		return
 	}
 
 	pidParam := c.Param("product_id")
 	if pidParam == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product_id"})
 		return
 	}
 
@@ -86,20 +86,20 @@ func (h *ShoppingHandler) RemoveFromCart(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Đã xóa sản phẩm khỏi giỏ hàng"})
+	c.JSON(http.StatusOK, gin.H{"message": "Product removed from cart successfully"})
 }
 
 // Cập nhật số lượng sản phẩm trong giỏ hàng (body: { "quantity": <int> })
 func (h *ShoppingHandler) UpdateCartItem(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or unauthenticated user"})
 		return
 	}
 
 	pidParam := c.Param("product_id")
 	if pidParam == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product_id"})
 		return
 	}
 
@@ -113,7 +113,7 @@ func (h *ShoppingHandler) UpdateCartItem(c *gin.Context) {
 		Quantity int `json:"quantity"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid body"})
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *ShoppingHandler) UpdateCartItem(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Cập nhật số lượng giỏ hàng thành công"})
+	c.JSON(http.StatusOK, gin.H{"message": "Cart item quantity updated successfully"})
 }
 
 func (h *ShoppingHandler) Checkout(c *gin.Context) {
@@ -133,7 +133,7 @@ func (h *ShoppingHandler) Checkout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Thanh toán đơn hàng thành công",
+		"message": "Checkout successful",
 		"order":   order,
 	})
 }
@@ -153,7 +153,7 @@ func (h *ShoppingHandler) GetOrderByID(c *gin.Context) {
 	idParam := c.Param("id")
 	orderID, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID đơn hàng không hợp lệ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *ShoppingHandler) GetOrderByID(c *gin.Context) {
 func (h *ShoppingHandler) GetMyOrders(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or unauthenticated user"})
 		return
 	}
 
@@ -186,14 +186,14 @@ func (h *ShoppingHandler) GetMyOrders(c *gin.Context) {
 func (h *ShoppingHandler) GetMyOrderByID(c *gin.Context) {
 	userID := getUserID(c)
 	if userID == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or unauthenticated user"})
 		return
 	}
 
 	idParam := c.Param("id")
 	orderID, err := strconv.ParseInt(idParam, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ID đơn hàng không hợp lệ"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
 		return
 	}
 
