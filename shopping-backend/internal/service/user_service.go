@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"io"
 	"shopping-backend/internal/domain"
@@ -20,6 +19,10 @@ type UserService interface {
 	Login(ctx context.Context, req domain.LoginReq) (*domain.AuthResponse, error)
 	ForgotPassword(ctx context.Context, req domain.ForgotPasswordReq) (string, error)
 	ResetPassword(ctx context.Context, req domain.ResetPasswordReq) error
+
+	// 🟢 BỔ SUNG 2 PHƯƠNG THỨC MỚI VÀO INTERFACE
+	GetAllUsers(ctx context.Context) ([]domain.User, error)
+	UpdateUserRole(ctx context.Context, userID int64, role string) error
 }
 
 type userService struct {
@@ -72,7 +75,8 @@ func generateOTPToken(email, otp string) (string, error) {
 func (s *userService) Register(ctx context.Context, req domain.RegisterReq) (*domain.AuthResponse, error) {
 	existing, _ := s.repo.GetByEmail(ctx, req.Email)
 	if existing != nil {
-		return nil, errors.New("email này đã được sử dụng")
+		// 🟢 SỬA: Trả về ErrEmailAlreadyExists của domain
+		return nil, domain.ErrEmailAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -107,11 +111,13 @@ func (s *userService) Register(ctx context.Context, req domain.RegisterReq) (*do
 func (s *userService) Login(ctx context.Context, req domain.LoginReq) (*domain.AuthResponse, error) {
 	user, err := s.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, errors.New("email hoặc mật khẩu không chính xác")
+		// 🟢 SỬA: Trả về ErrInvalidCredentials của domain
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, errors.New("email hoặc mật khẩu không chính xác")
+		// 🟢 SỬA: Trả về ErrInvalidCredentials của domain khi sai pass
+		return nil, domain.ErrInvalidCredentials
 	}
 
 	token, err := generateJWT(user)
@@ -122,50 +128,53 @@ func (s *userService) Login(ctx context.Context, req domain.LoginReq) (*domain.A
 	return &domain.AuthResponse{Token: token, User: *user}, nil
 }
 
-// 🟢 MỚI: Xử lý Quên mật khẩu -> Trả về Mã OTP 6 chữ số
 func (s *userService) ForgotPassword(ctx context.Context, req domain.ForgotPasswordReq) (string, error) {
 	user, err := s.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return "", errors.New("không tìm thấy tài khoản với email này")
+		// 🟢 SỬA: Trả về ErrUserNotFound của domain
+		return "", domain.ErrUserNotFound
 	}
 
-	// 1. Sinh mã 6 số
 	otpCode := generateOTP6Digits()
 
-	// 2. Tạo signature JWT chứa OTP đó để lưu vết (Không cần lưu DB)
 	signedToken, err := generateOTPToken(user.Email, otpCode)
 	if err != nil {
 		return "", err
 	}
 
-	// In ra log để kiểm tra
 	fmt.Printf("[FORGOT PASSWORD] Mã OTP 6 số cho %s: %s | Signed Token: %s\n", user.Email, otpCode, signedToken)
 
-	// Trả về duy nhất MÃ 6 CHỮ SỐ
 	return otpCode, nil
 }
 
-// 🟢 MỚI: Xử lý Đặt lại mật khẩu với mã 6 số
 func (s *userService) ResetPassword(ctx context.Context, req domain.ResetPasswordReq) error {
-	// Kiểm tra độ dài mã OTP
 	if len(req.Token) != 6 {
-		return errors.New("mã xác thực phải gồm đúng 6 chữ số")
+		// 🟢 SỬA: Trả về ErrInvalidToken của domain
+		return domain.ErrInvalidToken
 	}
 
-	// Lấy thông tin user
 	user, err := s.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return errors.New("người dùng không tồn tại")
+		// 🟢 SỬA: Trả về ErrUserNotFound của domain
+		return domain.ErrUserNotFound
 	}
 
-	// Hash mật khẩu mới
 	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	// Cập nhật mật khẩu vào DB
 	return s.repo.UpdatePassword(ctx, user.ID, string(newHashedPassword))
+}
+
+// 🟢 MỚI: Service Lấy danh sách User
+func (s *userService) GetAllUsers(ctx context.Context) ([]domain.User, error) {
+	return s.repo.GetAll(ctx)
+}
+
+// 🟢 MỚI: Service Cập nhật Role
+func (s *userService) UpdateUserRole(ctx context.Context, userID int64, role string) error {
+	return s.repo.UpdateRole(ctx, userID, role)
 }
 
 // package service

@@ -71,3 +71,42 @@ func (r *userRepository) UpdatePassword(ctx context.Context, userID int64, newPa
 	_, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
 	return err
 }
+
+// 🟢 MỚI: Lấy danh sách toàn bộ User
+func (r *userRepository) GetAll(ctx context.Context) ([]domain.User, error) {
+	query := `SELECT id, email, full_name, role, created_at FROM users ORDER BY id ASC`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]domain.User, 0)
+	for rows.Next() {
+		var u domain.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.FullName, &u.Role, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, nil
+}
+
+// 🟢 MỚI: Cập nhật Role của User theo ID
+func (r *userRepository) UpdateRole(ctx context.Context, userID int64, role string) error {
+	query := `UPDATE users SET role = $1 WHERE id = $2`
+	res, err := r.db.ExecContext(ctx, query, role, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrUserNotFound
+	}
+
+	return nil
+}
