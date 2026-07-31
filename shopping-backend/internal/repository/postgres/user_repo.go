@@ -1,0 +1,73 @@
+package postgres
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"shopping-backend/internal/domain"
+)
+
+type userRepository struct {
+	db *sql.DB
+}
+
+func NewUserRepository(db *sql.DB) domain.UserRepository {
+	return &userRepository{db: db}
+}
+
+func (r *userRepository) Create(ctx context.Context, u *domain.User) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Tạo User
+	query := `
+		INSERT INTO users (email, password_hash, full_name, role)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at
+	`
+	err = tx.QueryRowContext(ctx, query, u.Email, u.PasswordHash, u.FullName, u.Role).Scan(&u.ID, &u.CreatedAt)
+	if err != nil {
+		return err
+	}
+
+	// // 2. Tự động khởi tạo Giỏ hàng trống cho User
+	// cartQuery := `INSERT INTO carts (user_id) VALUES ($1)`
+	// if _, err := tx.ExecContext(ctx, cartQuery, u.ID); err != nil {
+	// 	return err
+	// }
+
+	return tx.Commit()
+}
+
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	query := `SELECT id, email, password_hash, full_name, role, created_at FROM users WHERE email = $1`
+	u := &domain.User{}
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Role, &u.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("người dùng không tồn tại")
+		}
+		return nil, err
+	}
+	return u, nil
+}
+
+func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, error) {
+	query := `SELECT id, email, password_hash, full_name, role, created_at FROM users WHERE id = $1`
+	u := &domain.User{}
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Role, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// 🟢 MỚI: Cập nhật mật khẩu trong DB
+func (r *userRepository) UpdatePassword(ctx context.Context, userID int64, newPasswordHash string) error {
+	query := `UPDATE users SET password_hash = $1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
+	return err
+}
