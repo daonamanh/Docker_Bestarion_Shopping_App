@@ -23,10 +23,10 @@ export default function AdminDashboard() {
   const [sortBy, setSortBy] = useState('created_at');
   const [order, setOrder] = useState('desc');
 
-  // 🟢 Product modal state (Thêm category vào formData)
+  // Product modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({ name: '', category: '', price: '', stock: '', image_url: '' });
+  const [formData, setFormData] = useState({ name: '', price: '', stock: '', image_url: '' });
   const [formError, setFormError] = useState('');
   const [imageSource, setImageSource] = useState('upload');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
       setUsers(Array.isArray(data) ? data : data.users || []);
     } catch (err) {
       toast.error(err.message || 'Cannot fetch user list.');
-    } finally {
+    } fontally: {
       setLoadingUsers(false);
     }
   }, []);
@@ -162,33 +162,24 @@ export default function AdminDashboard() {
     }
   };
 
-  // 🟢 Cập nhật hàm mở Modal thiết lập thông tin Category
   const openProductModal = (product = null) => {
     setFormError('');
     if (product) {
       setEditingProduct(product);
-      setFormData({
-        name: product.name || '',
-        category: product.category || '', // 🟢 Bổ sung Category
-        price: product.price || '',
-        stock: product.stock || '',
-        image_url: product.image_url || ''
-      });
+      setFormData({ name: product.name, price: product.price, stock: product.stock, image_url: product.image_url || '' });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', category: '', price: '', stock: '', image_url: '' });
+      setFormData({ name: '', price: '', stock: '', image_url: '' });
     }
     setIsModalOpen(true);
   };
 
-  // 🟢 Cập nhật Submit với category trong Payload
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setFormError('');
 
     const payload = {
       name: formData.name,
-      category: formData.category.trim(), // 🟢 Thêm category vào payload
       price: parseFloat(formData.price),
       stock: parseInt(formData.stock, 10),
       image_url: formData.image_url.trim()
@@ -243,14 +234,6 @@ export default function AdminDashboard() {
   };
 
   const handleRoleChange = async (userId, newRole, userName) => {
-    const targetUser = users.find(u => u.id === userId);
-    const adminCount = users.filter(u => u.role === 'admin').length;
-
-    if (targetUser?.role === 'admin' && newRole !== 'admin' && adminCount <= 1) {
-      toast.error('❌ Cannot demote the last remaining admin in the system!');
-      return;
-    }
-
     setUpdatingRoleId(userId);
     try {
       const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
@@ -434,42 +417,28 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              {/* 🟢 MỚI: Input nhập Category */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Category</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Price (VND)</label>
                 <input
-                  type="text"
-                  placeholder="e.g. Electronics, Clothing, Books..."
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Price (VND)</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Stock Quantity</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Stock Quantity</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
               </div>
 
               <div>
