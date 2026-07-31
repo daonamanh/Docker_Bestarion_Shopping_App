@@ -2,11 +2,11 @@ package handler
 
 import (
 	"net/http"
+	"shopping-backend/internal/domain"
+	"shopping-backend/internal/service"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"shopping-backend/internal/domain"
-	"shopping-backend/internal/service"
 )
 
 type ShoppingHandler struct {
@@ -89,6 +89,42 @@ func (h *ShoppingHandler) RemoveFromCart(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Đã xóa sản phẩm khỏi giỏ hàng"})
 }
 
+// Cập nhật số lượng sản phẩm trong giỏ hàng (body: { "quantity": <int> })
+func (h *ShoppingHandler) UpdateCartItem(c *gin.Context) {
+	userID := getUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		return
+	}
+
+	pidParam := c.Param("product_id")
+	if pidParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id is required"})
+		return
+	}
+
+	productID, err := strconv.ParseInt(pidParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product_id must be a number"})
+		return
+	}
+
+	var body struct {
+		Quantity int `json:"quantity"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+
+	if err := h.service.SetCartItemQuantity(c.Request.Context(), userID, productID, body.Quantity); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Cập nhật số lượng giỏ hàng thành công"})
+}
+
 func (h *ShoppingHandler) Checkout(c *gin.Context) {
 	order, err := h.service.Checkout(c.Request.Context(), getUserID(c))
 	if err != nil {
@@ -100,4 +136,32 @@ func (h *ShoppingHandler) Checkout(c *gin.Context) {
 		"message": "Thanh toán đơn hàng thành công",
 		"order":   order,
 	})
+}
+
+// Admin: Lấy danh sách tất cả các đơn hàng
+func (h *ShoppingHandler) GetAllOrders(c *gin.Context) {
+	orders, err := h.service.GetAllOrders(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, orders)
+}
+
+// Admin: Xem chi tiết 1 đơn hàng
+func (h *ShoppingHandler) GetOrderByID(c *gin.Context) {
+	idParam := c.Param("id")
+	orderID, err := strconv.ParseInt(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID đơn hàng không hợp lệ"})
+		return
+	}
+
+	order, err := h.service.GetOrderByID(c.Request.Context(), orderID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
 }

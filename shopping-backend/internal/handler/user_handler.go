@@ -19,6 +19,20 @@ func NewUserHandler(s service.UserService) *UserHandler {
 	return &UserHandler{service: s}
 }
 
+func getCurrentUserID(c *gin.Context) int64 {
+	if val, exists := c.Get("user_id"); exists {
+		switch v := val.(type) {
+		case float64:
+			return int64(v)
+		case int64:
+			return v
+		case int:
+			return int64(v)
+		}
+	}
+	return 0
+}
+
 // Hàm bổ trợ: Format lỗi Validate từ ShouldBindJSON thành Map chi tiết
 func formatValidationError(err error) map[string]string {
 	errs := make(map[string]string)
@@ -181,4 +195,90 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Cập nhật phân quyền thành công"})
+}
+
+func (h *UserHandler) GetMe(c *gin.Context) {
+	userID := getCurrentUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		return
+	}
+
+	user, err := h.service.GetProfile(c.Request.Context(), userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy người dùng"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Không thể lấy thông tin người dùng"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+func (h *UserHandler) UpdateMe(c *gin.Context) {
+	userID := getCurrentUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		return
+	}
+
+	var req domain.UpdateProfileReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Dữ liệu không hợp lệ",
+			"details": formatValidationError(err),
+		})
+		return
+	}
+
+	if err := h.service.UpdateProfile(c.Request.Context(), userID, req); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy người dùng"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cập nhật thông tin thất bại"})
+		return
+	}
+
+	updatedUser, err := h.service.GetProfile(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "Cập nhật thông tin thành công"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Cập nhật thông tin thành công", "user": updatedUser})
+}
+
+func (h *UserHandler) ChangePassword(c *gin.Context) {
+	userID := getCurrentUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tài khoản không hợp lệ hoặc chưa đăng nhập"})
+		return
+	}
+
+	var req domain.ChangePasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Dữ liệu không hợp lệ",
+			"details": formatValidationError(err),
+		})
+		return
+	}
+
+	if err := h.service.ChangePassword(c.Request.Context(), userID, req); err != nil {
+		if errors.Is(err, domain.ErrInvalidCurrentPassword) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Mật khẩu hiện tại không chính xác"})
+			return
+		}
+		if errors.Is(err, domain.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy người dùng"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Đổi mật khẩu thất bại"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Đổi mật khẩu thành công"})
 }

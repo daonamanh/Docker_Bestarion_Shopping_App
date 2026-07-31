@@ -60,6 +60,9 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 	u := &domain.User{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Role, &u.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
+		}
 		return nil, err
 	}
 	return u, nil
@@ -68,8 +71,35 @@ func (r *userRepository) GetByID(ctx context.Context, id int64) (*domain.User, e
 // 🟢 MỚI: Cập nhật mật khẩu trong DB
 func (r *userRepository) UpdatePassword(ctx context.Context, userID int64, newPasswordHash string) error {
 	query := `UPDATE users SET password_hash = $1 WHERE id = $2`
-	_, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
-	return err
+	res, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
+}
+
+// Cập nhật tên hiển thị của người dùng
+func (r *userRepository) UpdateFullName(ctx context.Context, userID int64, fullName string) error {
+	query := `UPDATE users SET full_name = $1 WHERE id = $2`
+	res, err := r.db.ExecContext(ctx, query, fullName, userID)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
 }
 
 // 🟢 MỚI: Lấy danh sách toàn bộ User
