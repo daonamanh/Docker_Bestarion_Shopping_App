@@ -13,11 +13,11 @@ pipeline {
             steps {
                 script {
                     echo '---> Đang chạy Unit Test cho Golang Backend...'
-                    // Build một image tạm thời chứa code và chạy 'go test' trực tiếp bên trong
                     sh '''
                         cd shopping-backend
                         docker build -t backend-test-img -f- . <<'EOF'
-FROM golang:1.23-alpine
+FROM golang:alpine
+ENV GOTOOLCHAIN=auto
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
