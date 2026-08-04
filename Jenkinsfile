@@ -42,8 +42,18 @@ EOF
         stage('4. Verify Docker Build') {
             steps {
                 script {
-                    echo '---> Kiểm tra đóng gói Docker Compose Build...'
-                    sh 'docker compose build'
+                    echo '---> Kiểm tra đóng gói Docker Images...'
+                    sh '''
+                        if command -v "docker compose" >/dev/null 2>&1; then
+                            docker compose build
+                        elif command -v docker-compose >/dev/null 2>&1; then
+                            docker-compose build
+                        else
+                            echo "Đang verify build trực tiếp từng Dockerfile..."
+                            docker build -t backend-service ./shopping-backend
+                            docker build -t frontend-service ./shopping-frontend
+                        fi
+                    '''
                 }
             }
         }
@@ -57,7 +67,7 @@ EOF
         }
         failure {
             echo '=================================================='
-            echo ' ❌ BUILD FAILED (ĐỎ 🔴) - UNIT TEST BỊ LỖI!'
+            echo ' ❌ BUILD FAILED (ĐỎ 🔴) - BỊ LỖI!'
             echo '=================================================='
         }
     }
