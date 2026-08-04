@@ -13,8 +13,13 @@ pipeline {
             steps {
                 script {
                     echo '---> Đang chạy Unit Test cho Golang Backend...'
-                    // Chạy test Go bên trong container tạm thời
-                    sh 'docker run --rm -v $PWD/shopping-backend:/app -w /app golang:1.23-alpine go test ./...'
+                    // Sử dụng pwd() để lấy đường dẫn chính xác và cd vào thư mục shopping-backend
+                    sh '''
+                        docker run --rm \
+                          -v "$(pwd)/shopping-backend":/app \
+                          -w /app \
+                          golang:1.23-alpine go test ./...
+                    '''
                 }
             }
         }
@@ -22,9 +27,8 @@ pipeline {
         stage('3. Run Frontend Unit Tests') {
             steps {
                 script {
-                    echo '---> Đang chạy Unit Test cho Frontend (nếu có)...'
-                    // Trường hợp Frontend có test
-                    // sh 'docker run --rm -v $PWD/shopping-frontend:/app -w /app node:20-slim npm test -- --watchAll=false'
+                    echo '---> Đang chạy Unit Test cho Frontend (Skip nếu chưa cấu hình)...'
+                    echo 'No frontend tests specified, skipping...'
                 }
             }
         }
