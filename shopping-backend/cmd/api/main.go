@@ -13,6 +13,7 @@ import (
 	"shopping-backend/internal/service"
 
 	"github.com/gin-contrib/cors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -124,7 +125,7 @@ func main() {
 			products.DELETE("/:id", productHandler.Delete)
 		}
 
-		// 🟢 MỚI: Route lấy danh sách Categories cho Frontend
+		// 🟢 MỚI: Route lấy danh sách Categori es cho Frontend
 		v1.GET("/categories", productHandler.GetCategories)
 
 		// 🟢 MỚI: Admin Management Routes (Fix lỗi 404 /api/v1/admin/users)
