@@ -13,12 +13,18 @@ pipeline {
             steps {
                 script {
                     echo '---> Đang chạy Unit Test cho Golang Backend...'
-                    // Sử dụng pwd() để lấy đường dẫn chính xác và cd vào thư mục shopping-backend
+                    // Build một image tạm thời chứa code và chạy 'go test' trực tiếp bên trong
                     sh '''
-                        docker run --rm \
-                          -v "$(pwd)/shopping-backend":/app \
-                          -w /app \
-                          golang:1.23-alpine go test ./...
+                        cd shopping-backend
+                        docker build -t backend-test-img -f- . <<'EOF'
+FROM golang:1.23-alpine
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+CMD ["go", "test", "./..."]
+EOF
+                        docker run --rm backend-test-img
                     '''
                 }
             }
@@ -27,7 +33,7 @@ pipeline {
         stage('3. Run Frontend Unit Tests') {
             steps {
                 script {
-                    echo '---> Đang chạy Unit Test cho Frontend (Skip nếu chưa cấu hình)...'
+                    echo '---> Skip Frontend tests...'
                     echo 'No frontend tests specified, skipping...'
                 }
             }
