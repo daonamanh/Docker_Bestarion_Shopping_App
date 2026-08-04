@@ -10,8 +10,12 @@ import AdminDashboard from './components/admin/AdminDashboard';
 
 export default function App() {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
   const [activeView, setActiveView] = useState('main'); // 'main' | 'profile'
 
@@ -33,7 +37,10 @@ export default function App() {
       <ToastContainer position="top-right" autoClose={3000} theme="dark" />
 
       {!user ? (
-        <AuthScreen onLoginSuccess={(loggedUser) => setUser(loggedUser)} />
+        <AuthScreen onLoginSuccess={(loggedUser) => {
+          localStorage.setItem('user', JSON.stringify(loggedUser));
+          setUser(loggedUser);
+        }} />
       ) : (
         <>
           {/* Top Navbar */}

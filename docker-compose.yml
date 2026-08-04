@@ -32,11 +32,14 @@
 # volumes:
 #   postgres_data:
 
+version: '3.8'
+
 services:
   backend:
     build: ./shopping-backend
     ports:
-      - "8081:8080"
+      - "8080:8080"
+    restart: on-failure
     environment:
       - DB_HOST=postgres-db
       - DB_PORT=5432
@@ -44,15 +47,22 @@ services:
       - DB_PASSWORD=secretpassword
       - DB_NAME=shopping_db
       - DB_SSLMODE=disable
+      - JWT_SECRET=super-secret-jwt-key-for-docker
+      - ADMIN_EMAIL=admin@gmail.com
+      - ADMIN_PASSWORD=123456
+      - GODEBUG=netdns=go  # 🟢 Ép Go resolver dùng DNS nội bộ của Docker mạng bridge
     volumes:
       - ./shopping-backend:/app
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy  # 🟢 Chờ cho đến khi Postgres sẵn sàng hoàn toàn mới cho Backend chạy
 
   frontend:
     build: ./shopping-frontend
     ports:
       - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://127.0.0.1:8080/api/v1
     volumes:
       - ./shopping-frontend:/app
       - /app/node_modules
@@ -67,6 +77,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d shopping_db"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:

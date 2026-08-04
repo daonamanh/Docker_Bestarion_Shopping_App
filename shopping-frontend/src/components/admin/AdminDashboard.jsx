@@ -80,9 +80,11 @@ export default function AdminDashboard() {
 
       setProducts(result.data || []);
       setPagination(prev => ({ ...prev, total: result.total || 0, totalPages: result.total_pages || 1 }));
+      return result;
     } catch (err) {
       console.error(err);
       toast.error('Cannot fetch products. Please try again later.');
+      return null;
     } finally {
       setLoadingProducts(false);
     }
@@ -204,12 +206,19 @@ export default function AdminDashboard() {
     setFormError('');
 
     const payload = {
-      name: formData.name,
-      category: formData.category.trim(), // 🟢 Thêm category vào payload
+      name: formData.name.trim(),
+      category: formData.category.trim(),
       price: parseFloat(formData.price),
       stock: parseInt(formData.stock, 10),
       image_url: formData.image_url.trim()
     };
+
+    if (!payload.name) {
+      const msg = 'Product name cannot be empty';
+      setFormError(msg);
+      toast.error(`❌ ${msg}`);
+      return;
+    }
 
     try {
       const url = editingProduct ? `${API_BASE_URL}/products/${editingProduct.id}` : `${API_BASE_URL}/products`;
@@ -228,6 +237,18 @@ export default function AdminDashboard() {
         const errData = await res.json();
         throw new Error(errData.error || 'An error occurred');
       }
+
+      const savedProduct = await res.json();
+      setProducts(prev => {
+        if (editingProduct) {
+          return prev.map(product => product.id === editingProduct.id ? { ...product, ...savedProduct } : product);
+        }
+        return [savedProduct, ...prev];
+      });
+      setPagination(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total + (editingProduct ? 0 : 1))
+      }));
 
       toast.success(editingProduct ? `✏️ Updated "${formData.name}" successfully!` : `🎉 Added product successfully!`);
       setIsModalOpen(false);
@@ -252,6 +273,8 @@ export default function AdminDashboard() {
         throw new Error(errData.error || 'Cannot delete product');
       }
 
+      setProducts(prev => prev.filter(product => product.id !== id));
+      setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
       toast.info(`🗑️ Product deleted successfully!`);
       fetchProducts();
     } catch (err) {
@@ -449,7 +472,7 @@ export default function AdminDashboard() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -461,7 +484,7 @@ export default function AdminDashboard() {
                   type="text"
                   placeholder="e.g. Electronics, Clothing, Books..."
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -474,7 +497,7 @@ export default function AdminDashboard() {
                     required
                     min="0"
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -486,7 +509,7 @@ export default function AdminDashboard() {
                     required
                     min="0"
                     value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -535,7 +558,7 @@ export default function AdminDashboard() {
                     type="url"
                     placeholder="https://images.unsplash.com/photo-..."
                     value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500"
                   />
                 )}
@@ -546,7 +569,7 @@ export default function AdminDashboard() {
                       <p className="text-[10px] text-slate-400">Selected Picture Preview:</p>
                       <button
                         type="button"
-                        onClick={() => setFormData({ ...formData, image_url: '' })}
+                        onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
                         className="text-[10px] text-rose-400 hover:underline"
                       >
                         Remove

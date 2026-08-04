@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -32,7 +33,6 @@ func main() {
 	for _, envFile := range []string{".env", "../.env", "../../.env"} {
 		if err := godotenv.Load(envFile); err == nil {
 			envLoaded = true
-			//log.Printf("✅ Loaded environment variables from %s\n", envFile)
 			break
 		}
 	}
@@ -48,6 +48,7 @@ func main() {
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := getEnvOrDefault("DB_NAME", "go_react_post")
 	dbSSLMode := getEnvOrDefault("DB_SSLMODE", "disable")
+	jwtSecret := getEnvOrDefault("JWT_SECRET", "your_super_secret_jwt_key_123")
 
 	if dbPassword == "" {
 		log.Println("⚠️  WARNING: DB_PASSWORD is empty! If your PostgreSQL requires a password, set DB_PASSWORD in your .env file.")
@@ -67,6 +68,13 @@ func main() {
 	}
 	log.Println("Connected to PostgreSQL successfully!")
 
+	if err := postgres.EnsureSchema(db); err != nil {
+		log.Fatalf("Schema initialization failed: %v", err)
+	}
+	log.Println("Database schema ensured successfully!")
+
+	service.JwtSecret = []byte(jwtSecret)
+
 	// 2. Khai báo Dependency Injection - Product Module
 	productRepo := postgres.NewProductRepository(db)
 	productService := service.NewProductService(productRepo)
@@ -81,36 +89,51 @@ func main() {
 	shoppingRepo := postgres.NewShoppingRepository(db)
 	shoppingService := service.NewShoppingService(shoppingRepo)
 	shoppingHandler := handler.NewShoppingHandler(shoppingService)
+
 	// Khai báo Upload Handler
 	uploadHandler := handler.NewUploadHandler()
 
 	// 3. Khai báo Route & Cấu hình CORS Middleware
 	r := gin.Default()
 
-	// 🟢 Phục vụ static file cho các ảnh đã được tải lên server tại thư mục ./uploads
-	r.Static("/uploads", "./uploads")
-
+	// 🟢 [FIX CORS 1]: Cấu hình CORS rộng rãi cho tất cả Origin khi dev trong Docker
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5173"},
+		AllowOriginFunc: func(origin string) bool {
+			// Cho phép tất cả request từ localhost / 127.0.0.1 ở mọi port
+			return true
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	// 🟢 [FIX CORS 2]: Middleware Bắt và phản hồi 200 OK ngay lập tức cho request OPTIONS
+	r.Use(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+		c.Next()
+	})
+
+	// 🟢 Phục vụ static file cho các ảnh đã được tải lên server tại thư mục ./uploads
+	r.Static("/uploads", "./uploads")
 
 	// 4. Các đường dẫn API
 	v1 := r.Group("/api/v1")
 	{
 		// Upload route
 		v1.POST("/upload", uploadHandler.UploadFile)
+
 		// Auth Routes (Đăng ký / Đăng nhập)
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/register", userHandler.Register)
 			auth.POST("/login", userHandler.Login)
 
-			// 🟢 MỚI: Thêm 2 route cho tính năng Quên & Đặt lại mật khẩu
+			// Route cho tính năng Quên & Đặt lại mật khẩu
 			auth.POST("/forgot-password", userHandler.ForgotPassword)
 			auth.POST("/reset-password", userHandler.ResetPassword)
 		}
@@ -125,22 +148,22 @@ func main() {
 			products.DELETE("/:id", productHandler.Delete)
 		}
 
-		// 🟢 MỚI: Route lấy danh sách Categori es cho Frontend
+		// Route lấy danh sách Categories cho Frontend
 		v1.GET("/categories", productHandler.GetCategories)
 
-		// 🟢 MỚI: Admin Management Routes (Fix lỗi 404 /api/v1/admin/users)
+		// Admin Management Routes
 		admin := v1.Group("/admin")
 		admin.Use(middleware.AuthMiddleware()) // Yêu cầu JWT Token
 		{
 			admin.GET("/users", userHandler.GetAllUsers)
 			admin.PATCH("/users/:id/role", userHandler.UpdateRole)
 
-			// 🟢 MỚI: Quản lý Đơn hàng cho Admin
+			// Quản lý Đơn hàng cho Admin
 			admin.GET("/orders", shoppingHandler.GetAllOrders)     // Lấy danh sách đơn hàng
 			admin.GET("/orders/:id", shoppingHandler.GetOrderByID) // Xem chi tiết đơn hàng
 		}
 
-		// 🟢 2. Các Route bắt buộc phải ĐĂNG NHẬP (Cần Bearer Token)
+		// Các Route bắt buộc phải ĐĂNG NHẬP (Cần Bearer Token)
 		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware()) // Bắt buộc client gửi Token hợp lệ
 		{
@@ -153,7 +176,7 @@ func main() {
 			protected.PATCH("/cart/items/:product_id", shoppingHandler.UpdateCartItem)
 			protected.POST("/checkout", shoppingHandler.Checkout)
 
-			// 🟢 MỚI: Xem danh sách và chi tiết đơn hàng cá nhân của User
+			// Xem danh sách và chi tiết đơn hàng cá nhân của User
 			protected.GET("/my/orders", shoppingHandler.GetMyOrders)
 			protected.GET("/my/orders/:id", shoppingHandler.GetMyOrderByID)
 		}
