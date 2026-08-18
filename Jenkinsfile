@@ -1,86 +1,6 @@
-// pipeline {
-//     agent any
-
-//     stages {
-//         stage('1. Checkout Code') {
-//             steps {
-//                 checkout scm
-//                 echo '---> Đã lấy code mới nhất từ Git thành công!'
-//             }
-//         }
-
-//         stage('2. Run Backend Unit Tests') {
-//             steps {
-//                 script {
-//                     echo '---> Đang chạy Unit Test cho Golang Backend...'
-//                     sh '''
-//                         cd shopping-backend
-//                         docker build -t backend-test-img -f- . <<'EOF'
-// FROM golang:alpine
-// ENV GOTOOLCHAIN=auto
-// WORKDIR /app
-// COPY go.mod go.sum ./
-// RUN go mod download
-// COPY . .
-// CMD ["go", "test", "./..."]
-// EOF
-//                         docker run --rm backend-test-img
-//                     '''
-//                 }
-//             }
-//         }
-
-//         stage('3. Run Frontend Unit Tests') {
-//             steps {
-//                 script {
-//                     echo '---> Skip Frontend tests...'
-//                     echo 'No frontend tests specified, skipping...'
-//                 }
-//             }
-//         }
-
-//         stage('4. Verify Docker Build') {
-//             steps {
-//                 script {
-//                     echo '---> Kiểm tra đóng gói Docker Images...'
-//                     sh '''
-//                         if command -v "docker compose" >/dev/null 2>&1; then
-//                             docker compose build
-//                         elif command -v docker-compose >/dev/null 2>&1; then
-//                             docker-compose build
-//                         else
-//                             echo "Đang verify build trực tiếp từng Dockerfile..."
-//                             docker build -t backend-service ./shopping-backend
-//                             docker build -t frontend-service ./shopping-frontend
-//                         fi
-//                     '''
-//                 }
-//             }
-//         }
-//     }
-
-//     post {
-//         success {
-//             echo '=================================================='
-//             echo ' 🎉 BUILD SUCCESS (XANH 🟢) - ĐẠT TIÊU CHUẨN DOD!'
-//             echo '=================================================='
-//         }
-//         failure {
-//             echo '=================================================='
-//             echo ' ❌ BUILD FAILED (ĐỎ 🔴) - BỊ LỖI!'
-//             echo '=================================================='
-//         }
-//     }
-// }
-
-
-
-
-
 pipeline {
     agent any
 
-    // Lập lịch tự động chạy vào 02:00 AM sáng Chủ Nhật hàng tuần
     triggers {
         cron('0 2 * * 0')
     }
@@ -91,52 +11,55 @@ pipeline {
     }
 
     stages {
-        // ĐÃ XÓA STAGE 1 (Checkout SCM): Tránh gọi Git fetch 2 lần gây timeout port 443
-
-        stage('1. Install Dependencies & Tools') {
+        stage('0. Disable CSP Security') {
             steps {
                 script {
-                    echo '=== Cài đặt các thư viện và linter ==='
-                    
-                    // 1. JavaScript / TypeScript
-                    if (fileExists('package.json')) {
-                        echo '[+] Installing Node.js packages...'
-                        sh 'npm ci || npm install'
-                    }
-
-                    // 2. Go / Golang
-                    if (fileExists('.golangci.yml') || fileExists('go.mod')) {
-                        echo '[+] Checking/Installing Go dependencies...'
-                        sh '''
-                            if [ -f "go.mod" ]; then
-                                go mod tidy || true
-                            fi
-                        '''
-                    }
-
-                    // 3. Ruby
-                    if (fileExists('.rubocop.yml') || fileExists('Gemfile')) {
-                        echo '[+] Checking/Installing RuboCop...'
-                        sh '''
-                            if ! command -v rubocop &> /dev/null; then
-                                gem install rubocop || true
-                            fi
-                            if [ -f "Gemfile" ]; then
-                                bundle install || true
-                            fi
-                        '''
-                    }
+                    // Tắt chính sách CSP tĩnh của Jenkins để tránh mất style báo cáo
+                    System.setProperty("hudson.model.DirectoryBrowserSupport.CSP", "")
                 }
             }
         }
 
-        stage('2. Run Complexity Audit') {
+        stage('1. Dynamic Dependencies Setup') {
+            steps {
+                script {
+                    echo '=== Cài đặt thư viện động theo cấu trúc cây thư mục ==='
+                    
+                    // 1. Quét động và cài npm cho TẤT CẢ các thư mục có package.json
+                    sh '''
+                        find . -name "package.json" -not -path "*/node_modules/*" | while read pkg; do
+                            dir=$(dirname "$pkg")
+                            echo "[+] Installing Node dependencies in: $dir"
+                            (cd "$dir" && npm ci || npm install)
+                        done
+                    '''
+
+                    // 2. Quét động và cài Go dependencies cho TẤT CẢ thư mục có go.mod
+                    sh '''
+                        find . -name "go.mod" -not -path "*/vendor/*" | while read gomod; do
+                            dir=$(dirname "$gomod")
+                            echo "[+] Tidying Go module in: $dir"
+                            (cd "$dir" && go mod tidy || true)
+                        done
+                    '''
+
+                    // 3. Quét động và cài Gemfile cho Ruby
+                    sh '''
+                        find . -name "Gemfile" -not -path "*/vendor/*" | while read gem; do
+                            dir=$(dirname "$gem")
+                            echo "[+] Installing Ruby gems in: $dir"
+                            (cd "$dir" && bundle install || true)
+                        done
+                    '''
+                }
+            }
+        }
+
+        stage('2. Execute Complexity Audit') {
             steps {
                 script {
                     echo '=== Chạy script kiểm tra độ phức tạp code ==='
                     sh 'chmod +x ./scripts/run-complexity-check.sh'
-                    
-                    // Thực thi runner kiểm tra (JS/TS, Go v1.61.0, Ruby)
                     sh './scripts/run-complexity-check.sh || true'
                 }
             }
@@ -144,15 +67,14 @@ pipeline {
 
         stage('3. Publish HTML Report') {
             steps {
-                echo '=== Đẩy báo cáo HTML lên giao diện Jenkins ==='
                 publishHTML([
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
                     reportDir: 'reports',
                     reportFiles: 'complexity-report.html',
-                    reportName: 'Weekly Code Complexity Audit',
-                    reportTitles: 'Divoro Code Complexity Compliance Report'
+                    reportName: 'Dynamic Code Complexity Audit',
+                    reportTitles: 'Multi-Language Code Complexity Audit Report'
                 ])
             }
         }
@@ -160,7 +82,7 @@ pipeline {
 
     post {
         always {
-            echo '=== Hoàn tất tiến trình kiểm tra Code Complexity ==='
+            echo '=== Tiến trình hoàn tất ==='
         }
     }
 }
