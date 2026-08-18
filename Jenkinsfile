@@ -11,14 +11,7 @@ pipeline {
     }
 
     stages {
-        stage('0. Disable CSP Security') {
-            steps {
-                script {
-                    // Tắt chính sách CSP tĩnh của Jenkins để tránh mất style báo cáo
-                    System.setProperty("hudson.model.DirectoryBrowserSupport.CSP", "")
-                }
-            }
-        }
+        // Đã XÓA Stage 0 gây lỗi Security Sandbox
 
         stage('1. Dynamic Dependencies Setup') {
             steps {
