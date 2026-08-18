@@ -1,0 +1,44 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.0
+  Exclude:
+    - 'db/schema.rb'
+    - 'bin/*'
+    - 'node_modules/**/*'
+
+# 1. Giới hạn độ phức tạp Cyclomatic
+Metrics/CyclomaticComplexity:
+  Max: 10
+  Enabled: true
+
+# 2. Giới hạn độ phức tạp Perceived/Cognitive
+Metrics/PerceivedComplexity:
+  Max: 10
+  Enabled: true
+
+# 3. Giới hạn độ dài của một Hàm/Method (Dưới 30 dòng)
+Metrics/MethodLength:
+  Max: 30
+  CountComments: false
+  Enabled: true
+
+# 4. Giới hạn độ dài của một Class (Dưới 200 dòng)
+Metrics/ClassLength:
+  Max: 200
+  Enabled: true
+
+# 5. Giới hạn số lượng tham số truyền vào Hàm (Tối đa 4 tham số)
+Metrics/ParameterLists:
+  Max: 4
+  CountKeywordArgs: true
+  Enabled: true
+
+# 6. Giới hạn độ lồng của các khối code (Block Nesting <= 3)
+Metrics/BlockNesting:
+  Max: 3
+  Enabled: true
+
+# 7. Giới hạn chỉ số ABC (Assignment, Branch, Condition)
+Metrics/AbcSize:
+  Max: 20
+  Enabled: true

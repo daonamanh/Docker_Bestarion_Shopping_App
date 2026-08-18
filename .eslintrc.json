@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/eslintrc",
+  "env": {
+    "es2021": true,
+    "node": true
+  },
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "sonarjs"
+  ],
+  "rules": {
+    "complexity": ["error", { "max": 10 }],
+    "sonarjs/cognitive-complexity": ["error", 15],
+    "max-depth": ["error", 4],
+    "max-params": ["error", 5],
+    "max-statements": ["error", 30],
+    "max-lines-per-function": ["error", { "max": 50, "skipBlankLines": true, "skipComments": true }],
+    "max-nested-callbacks": ["error", 3],
+    "no-nested-ternary": "error",
+    "sonarjs/no-identical-functions": "error",
+    "sonarjs/no-duplicate-string": ["error", { "threshold": 3 }]
+  }
+}

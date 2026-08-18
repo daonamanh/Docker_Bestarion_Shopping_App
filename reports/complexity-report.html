@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Complexity Audit Report</title>
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --pass-bg: #f0fdf4;
+            --pass-text: #15803d;
+            --pass-border: #bbf7d0;
+            --fail-bg: #fef2f2;
+            --fail-text: #b91c1c;
+            --fail-border: #fecaca;
+            --rule-bg: #f1f5f9;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            margin: 0; 
+            padding: 30px 20px; 
+            background-color: var(--bg-body); 
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .header { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            color: white; 
+            padding: 24px 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 24px;
+        }
+        .header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+        .header p { margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; }
+
+        .section { 
+            background: var(--card-bg); 
+            padding: 24px; 
+            margin-bottom: 24px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .section-title { font-size: 18px; font-weight: 600; margin: 0; }
+
+        .badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .badge-pass { background: var(--pass-bg); color: var(--pass-text); border: 1px solid var(--pass-border); }
+        .badge-fail { background: var(--fail-bg); color: var(--fail-text); border: 1px solid var(--fail-border); }
+
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+            table-layout: fixed;
+        }
+        .audit-table th {
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 10px 14px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .audit-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+        .audit-table tr:last-child td { border-bottom: none; }
+
+        .col-location { width: 40%; }
+        .col-message  { width: 38%; }
+        .col-rule     { width: 22%; }
+        
+        .code-location {
+            font-family: monospace;
+            font-size: 13px;
+            color: #2563eb;
+            font-weight: 500;
+        }
+        .rule-tag {
+            display: inline-block;
+            background: var(--rule-bg);
+            color: #475569;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .rule-tag.cyclo-tag {
+            background: var(--fail-bg);
+            color: var(--fail-text);
+            border: 1px solid var(--fail-border);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Multi-Language Code Complexity Audit Report</h1>
+            <p>Target Compliance: Divoro Diligence Work | Generated: Tue 18 Aug 2026 02:53:43 PM +07</p>
+        </div>
+    <div class="section">
+        <div class="section-header">
+            <h2 class="section-title">🟨 TypeScript / JavaScript Audit (ESLint)</h2>
+<span class='badge badge-fail'>⚠️ VIOLATIONS DETECTED</span></div>
+<table class='audit-table'><thead><tr><th class='col-location'>Location</th><th class='col-message'>Message</th><th class='col-rule'>Rule ID</th></tr></thead><tbody>
+<tr><td class="code-location">shopping-frontend/src/App.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/AdminDashboard.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/AdminDashboard.jsx:139:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/AdminDashboard.jsx:149:7</td><td>Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  147 |   useEffect(() =&gt; {
+  148 |     if (activeTab === 'products') {
+&gt; 149 |       fetchProducts();
+      |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  150 |       fetchCategories();
+  151 |     }
+  152 |     if (activeTab === 'users') fetchUsers();</td><td><span class="rule-tag">react-hooks/set-state-in-effect</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/AdminDashboard.jsx:177:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/AdminOrderDetailModal.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/OrderManagement.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/ProductManagement.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/admin/UserManagement.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/auth/AuthScreen.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/auth/AuthScreen.jsx:122:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/auth/AuthScreen.jsx:154:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/auth/AuthScreen.jsx:189:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/common/Navbar.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/CustomerStorefront.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/CustomerStorefront.jsx:138:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/CustomerStorefront.jsx:147:5</td><td>Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  145 |
+  146 |   useEffect(() =&gt; {
+&gt; 147 |     fetchCart();
+      |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  148 |     fetchMyOrders();
+  149 |     fetchCategories(); // 👈 Gọi API lấy danh mục khi trang vừa load
+  150 |   }, [fetchMyOrders]);</td><td><span class="rule-tag">react-hooks/set-state-in-effect</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/CustomerStorefront.jsx:154:7</td><td>Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  152 |   useEffect(() =&gt; {
+  153 |     if (activeTab === 'shop') {
+&gt; 154 |       fetchProducts();
+      |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  155 |     } else if (activeTab === 'my_orders') {
+  156 |       fetchMyOrders();
+  157 |     }</td><td><span class="rule-tag">react-hooks/set-state-in-effect</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/CustomerStorefront.jsx:196:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/CustomerStorefront.jsx:224:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/MyOrderDetailModal.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/MyOrderDetailModal.jsx:2:32</td><td>'Printer' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/MyOrdersList.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/ProductCatalog.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/ShoppingCart.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/ShoppingCart.jsx:24:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/customer/ShoppingCart.jsx:43:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/profile/ProfilePage.jsx:1:8</td><td>'React' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/profile/ProfilePage.jsx:36:16</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/profile/ProfilePage.jsx:75:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+<tr><td class="code-location">shopping-frontend/src/components/profile/ProfilePage.jsx:114:14</td><td>'err' is defined but never used.</td><td><span class="rule-tag">no-unused-vars</span></td></tr>
+</tbody></table>
+</div>
+    <div class="section">
+        <div class="section-header">
+            <h2 class="section-title">🟦 Go / Golang Audit</h2>
+<span class='badge badge-fail'>⚠️ VIOLATIONS DETECTED</span></div>
+<table class='audit-table'><thead><tr><th class='col-location'>Location</th><th class='col-message'>Message / Function</th><th class='col-rule'>Metric & Score</th></tr></thead><tbody>
+<tr><td class='code-location'>./shopping-backend/internal/middleware/auth_middleware.go:12:1</td><td>Function AuthMiddleware exceeds Cognitive complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cognitive: 20</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/middleware/auth_middleware.go:12:1</td><td>Function AuthMiddleware exceeds Cyclomatic complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cyclomatic: 12</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/repository/postgres/product_repo.go:33:1</td><td>Function (*productRepository).GetList exceeds Cognitive complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cognitive: 14</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/repository/postgres/product_repo.go:33:1</td><td>Function (*productRepository).GetList exceeds Cyclomatic complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cyclomatic: 14</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/repository/postgres/schema.go:11:1</td><td>Function EnsureSchema exceeds Cognitive complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cognitive: 30</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/repository/postgres/schema.go:11:1</td><td>Function EnsureSchema exceeds Cyclomatic complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cyclomatic: 20</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/repository/postgres/shopping_repo.go:85:1</td><td>Function (*ShoppingRepository).Checkout exceeds Cognitive complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cognitive: 16</span></td></tr>
+<tr><td class='code-location'>./shopping-backend/internal/repository/postgres/shopping_repo.go:85:1</td><td>Function (*ShoppingRepository).Checkout exceeds Cyclomatic complexity limit.</td><td><span class='rule-tag cyclo-tag'>Cyclomatic: 13</span></td></tr>
+</tbody></table>
+</div>
+    <div class="section">
+        <div class="section-header">
+            <h2 class="section-title">🟥 Ruby Audit (RuboCop)</h2>
+<span class='badge badge-fail'>⚠️ VIOLATIONS DETECTED</span></div>
+<table class='audit-table'><thead><tr><th class='col-location'>Location</th><th class='col-message'>Message</th><th class='col-rule'>Cop Name</th></tr></thead><tbody>
+<tr><td class="code-location">test_complexity.rb:1:1</td><td>Missing frozen string literal comment.</td><td><span class="rule-tag">Style/FrozenStringLiteralComment</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:3:1</td><td>Missing top-level documentation comment for `class TestComplexity`.</td><td><span class="rule-tag">Style/Documentation</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:5:21</td><td>Avoid parameter lists longer than 4 parameters. [6/4]</td><td><span class="rule-tag">Metrics/ParameterLists</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:5:52</td><td>Unused method argument - `arg6`. If it's necessary, use `_` or `_arg6` as an argument name to indicate that it won't be used. If it's unnecessary, remove it.</td><td><span class="rule-tag">Lint/UnusedMethodArgument</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:6:8</td><td>Use `arg1.positive?` instead of `arg1 &gt; 0`.</td><td><span class="rule-tag">Style/NumericPredicate</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:7:7</td><td>Consider merging nested conditions into outer `if` conditions.</td><td><span class="rule-tag">Style/SoleNestedConditional</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:7:10</td><td>Use `arg2.positive?` instead of `arg2 &gt; 0`.</td><td><span class="rule-tag">Style/NumericPredicate</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:8:9</td><td>Consider merging nested conditions into outer `if` conditions.</td><td><span class="rule-tag">Style/SoleNestedConditional</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:8:12</td><td>Use `arg3.positive?` instead of `arg3 &gt; 0`.</td><td><span class="rule-tag">Style/NumericPredicate</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:9:11</td><td>Avoid more than 3 levels of block nesting.</td><td><span class="rule-tag">Metrics/BlockNesting</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:9:11</td><td>Favor modifier `if` usage when having a single-line body. Another good alternative is the usage of control flow `&amp;&amp;`/`||`.</td><td><span class="rule-tag">Style/IfUnlessModifier</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:9:11</td><td>Consider merging nested conditions into outer `if` conditions.</td><td><span class="rule-tag">Style/SoleNestedConditional</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:9:14</td><td>Use `arg4.positive?` instead of `arg4 &gt; 0`.</td><td><span class="rule-tag">Style/NumericPredicate</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:10:18</td><td>Prefer single-quoted strings when you don't need string interpolation or special symbols.</td><td><span class="rule-tag">Style/StringLiterals</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:17:22</td><td>Prefer single-quoted strings when you don't need string interpolation or special symbols.</td><td><span class="rule-tag">Style/StringLiterals</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:18:22</td><td>Prefer single-quoted strings when you don't need string interpolation or special symbols.</td><td><span class="rule-tag">Style/StringLiterals</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:19:22</td><td>Prefer single-quoted strings when you don't need string interpolation or special symbols.</td><td><span class="rule-tag">Style/StringLiterals</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:20:22</td><td>Prefer single-quoted strings when you don't need string interpolation or special symbols.</td><td><span class="rule-tag">Style/StringLiterals</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:21:15</td><td>Prefer single-quoted strings when you don't need string interpolation or special symbols.</td><td><span class="rule-tag">Style/StringLiterals</span></td></tr>
+<tr><td class="code-location">test_complexity.rb:24:4</td><td>Final newline missing.</td><td><span class="rule-tag">Layout/TrailingEmptyLines</span></td></tr>
+</tbody></table>
+</div>
+    </div>
+</body>
+</html>

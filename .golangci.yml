@@ -1,0 +1,83 @@
+# run:
+#   timeout: 5m
+#   tests: true
+
+# linters:
+#   disable-all: true
+#   enable:
+#     - typecheck
+#     - gocyclo
+#     - gocognit
+#     - cyclop
+#     - funlen
+#     - goconst
+#     - nestif
+
+# linters-settings:
+#   gocyclo:
+#     min-complexity: 10
+
+#   gocognit:
+#     min-complexity: 15
+
+#   cyclop:
+#     max-complexity: 10
+#     package-average: 5.0
+
+#   funlen:
+#     lines: 60
+#     statements: 40
+
+#   nestif:
+#     min-complexity: 3
+
+#   goconst:
+#     min-len: 3
+#     min-occurrences: 3
+
+# issues:
+#   exclude-use-default: false
+#   max-issues-per-linter: 0
+#   max-same-issues: 0
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    # - typecheck
+    - gocyclo
+    - gocognit
+    - cyclop
+    - funlen
+    - goconst
+    - nestif
+
+linters-settings:
+  gocyclo:
+    min-complexity: 5    # Hạ xuống 5 để chắc chắn bắt lỗi hàm ComplexFunction
+
+  gocognit:
+    min-complexity: 5    # Hạ xuống 5
+
+  cyclop:
+    max-complexity: 5
+    package-average: 3.0
+
+  funlen:
+    lines: 20            # Hạ xuống 20 dòng/hàm
+    statements: 10
+
+  nestif:
+    min-complexity: 2    # Lồng quá 2 tầng IF là bắt lỗi ngay
+
+  goconst:
+    min-len: 3
+    min-occurrences: 2
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
