@@ -20,6 +20,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Trả về giá trị từ biến môi trường nếu tồn tại, nếu không thì dùng giá trị mặc định.
 func getEnvOrDefault(key, fallback string) string {
 	if val := os.Getenv(key); val != "" {
 		return val
@@ -27,6 +28,8 @@ func getEnvOrDefault(key, fallback string) string {
 	return fallback
 }
 
+// Hàm main là điểm khởi chạy của toàn bộ backend.
+// Nó thực hiện 4 bước chính: load env, kết nối database, khởi tạo dependency và đăng ký routes.
 func main() {
 	// 🟢 Load .env file (tries current directory, parent directory)
 	envLoaded := false
@@ -183,6 +186,6 @@ func main() {
 	}
 
 	// 5. Run Server
-	log.Println("Server running on port :8080")
-	r.Run(":8080")
+	log.Println("Server running on port :8082")
+	r.Run(":8082")
 }

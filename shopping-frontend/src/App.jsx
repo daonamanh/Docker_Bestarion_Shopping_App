@@ -8,6 +8,8 @@ import ProfilePage from './components/profile/ProfilePage';
 import CustomerStorefront from './components/customer/CustomerStorefront';
 import AdminDashboard from './components/admin/AdminDashboard';
 
+// Component App là trung tâm điều phối trạng thái toàn ứng dụng.
+// Nó quyết định xem người dùng đã đăng nhập hay chưa, và chuyển giữa các view như auth, profile, storefront hoặc admin dashboard.
 export default function App() {
   const [user, setUser] = useState(() => {
     try {
@@ -19,11 +21,14 @@ export default function App() {
   });
   const [activeView, setActiveView] = useState('main'); // 'main' | 'profile'
 
+  // Cập nhật thông tin người dùng vào state và localStorage sau khi profile thay đổi.
   const handleUserUpdate = (updatedUser) => {
     localStorage.setItem('user', JSON.stringify(updatedUser));
     setUser(updatedUser);
   };
 
+  // Đăng xuất sẽ xóa token và dữ liệu người dùng khỏi trình duyệt, sau đó quay về màn hình chính.
+  // Đăng xuất sẽ xóa token và dữ liệu người dùng khỏi trình duyệt, sau đó quay về màn hình chính.
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -32,6 +37,8 @@ export default function App() {
     toast.info('👋 Logged out of account successfully');
   };
 
+  // JSX render giao diện chính của ứng dụng.
+  // JSX render giao diện chính của ứng dụng.
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       <ToastContainer position="top-right" autoClose={3000} theme="dark" />

@@ -41,7 +41,7 @@ WORKDIR /app
 # Copy file main từ stage build vào thư mục gốc /main
 COPY --from=builder /main /main
 
-EXPOSE 8080
+EXPOSE 8082
 
 # Chạy file /main ở thư mục gốc
 CMD ["/main"]

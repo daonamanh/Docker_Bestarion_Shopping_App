@@ -62,7 +62,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 	}
 
 	// 6. Trả về đường dẫn HTTP static của file vừa tải lên
-	fileURL := fmt.Sprintf("http://localhost:8080/uploads/%s", newFileName)
+	fileURL := fmt.Sprintf("http://localhost:8082/uploads/%s", newFileName)
 	c.JSON(http.StatusOK, gin.H{
 		"url":      fileURL,
 		"filename": newFileName,

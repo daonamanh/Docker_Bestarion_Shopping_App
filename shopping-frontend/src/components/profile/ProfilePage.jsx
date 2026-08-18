@@ -3,6 +3,8 @@ import { User } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { API_BASE_URL, getAuthHeaders } from '../../config';
 
+// Trang ProfilePage dùng để hiển thị và cập nhật thông tin tài khoản cá nhân.
+// Nó tải dữ liệu người dùng từ endpoint /me, cho phép đổi tên và mật khẩu, rồi gửi toast thông báo.
 export default function ProfilePage({ user, onBack, onUserUpdate }) {
   const [profile, setProfile] = useState(user);
   const [nameForm, setNameForm] = useState({ full_name: user?.full_name || '' });
@@ -13,6 +15,8 @@ export default function ProfilePage({ user, onBack, onUserUpdate }) {
   const [nameError, setNameError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  // Khi component mount, gọi API để lấy thông tin profile mới nhất từ server.
+  // Khi component mount, gọi API để lấy thông tin profile mới nhất từ server.
   useEffect(() => {
     const fetchProfile = async () => {
       setLoadingProfile(true);
@@ -39,6 +43,8 @@ export default function ProfilePage({ user, onBack, onUserUpdate }) {
     fetchProfile();
   }, []);
 
+  // Gửi request PATCH /me để cập nhật fullname cho tài khoản đang đăng nhập.
+  // Gửi request PATCH /me để cập nhật fullname cho tài khoản đang đăng nhập.
   const handleUpdateName = async (e) => {
     e.preventDefault();
     setNameError('');
@@ -73,6 +79,8 @@ export default function ProfilePage({ user, onBack, onUserUpdate }) {
     }
   };
 
+  // Gửi request PATCH /me/password sau khi kiểm tra các field mật khẩu đầu vào.
+  // Gửi request PATCH /me/password sau khi kiểm tra các field mật khẩu đầu vào.
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setPasswordError('');
@@ -110,6 +118,8 @@ export default function ProfilePage({ user, onBack, onUserUpdate }) {
     }
   };
 
+  // Render giao diện gồm phần xem thông tin hiện tại và hai form: đổi tên và đổi mật khẩu.
+  // Render giao diện gồm phần xem thông tin hiện tại và hai form: đổi tên và đổi mật khẩu.
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-8 space-y-6">
       <div className="flex items-center justify-between bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50">
